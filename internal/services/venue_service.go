@@ -58,7 +58,7 @@ func (s *venueService) validate(v *models.Venue) error {
 		return ErrVenueAddrRequired
 	}
 	if v.Color == "" {
-		v.Color = "#4ADE80"
+		v.Color = "#16A34A"
 	}
 	if !hexColor.MatchString(v.Color) {
 		return ErrInvalidColor

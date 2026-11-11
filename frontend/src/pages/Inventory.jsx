@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../context/AuthContext'
 import {
   ADJUSTMENT_TYPES, dateTime, expiryState, money, MOVEMENT_LABELS, stockState, UNIT_SHORT,
 } from '../lib/format'
-import { Badge, Button, Card, Empty, Field, Loading, Modal, Notice, PageHeader, Table, Tabs, useApi } from '../components/ui'
+import { Badge, Button, Card, Empty, Field, Icon, Loading, Modal, Notice, PageHeader, Table, Tabs, useApi } from '../components/ui'
+
+const ADJ_ICONS = { averia: 'heartbreak', vencimiento: 'calendar-x', devolucion: 'arrow-return-left', correccion: 'pencil-square' }
 
 /**
  * Inventario de la tienda activa.
@@ -19,7 +21,7 @@ export default function Inventory() {
   const canSeeMovements = rol !== 'cajero'
   const [params, setParams] = useSearchParams()
   const [tab, setTab] = useState('stock')
-  const [modal, setModal] = useState(null) // { kind: 'entrada'|'ajuste', productId? }
+  const [modal, setModal] = useState(null)
   const [notice, setNotice] = useState('')
   const inventory = useApi('/inventory', [store?.id])
 
@@ -35,6 +37,7 @@ export default function Inventory() {
   return (
     <div>
       <PageHeader
+        icon="boxes"
         title={rol === 'cajero' ? 'Precios y stock' : 'Inventario'}
         subtitle={
           isWarehouse
@@ -44,8 +47,8 @@ export default function Inventory() {
         actions={
           isWarehouse && (
             <>
-              <Button onClick={() => setModal({ kind: 'entrada' })}>+ Entrada de mercancía</Button>
-              <Button variant="ghost" onClick={() => setModal({ kind: 'ajuste' })}>Ajustar inventario</Button>
+              <Button icon="box-arrow-in-down" onClick={() => setModal({ kind: 'entrada' })}>Entrada de mercancía</Button>
+              <Button variant="ghost" icon="sliders" onClick={() => setModal({ kind: 'ajuste' })}>Ajustar inventario</Button>
             </>
           )
         }
@@ -57,8 +60,8 @@ export default function Inventory() {
           value={tab}
           onChange={setTab}
           tabs={[
-            { value: 'stock', label: 'Existencias' },
-            { value: 'movimientos', label: 'Movimientos' },
+            { value: 'stock', label: 'Existencias', icon: 'grid-3x3-gap' },
+            { value: 'movimientos', label: 'Movimientos', icon: 'clock-history' },
           ]}
         />
       )}
@@ -113,20 +116,30 @@ function StockTable({ inventory, isWarehouse, onEntry, onAdjust }) {
   }, [items, q, filter])
 
   return (
-    <Card className="mb-6">
+    <Card className="mb-4">
       <Notice tone="error">{inventory.error}</Notice>
-      <div className="flex flex-col sm:flex-row gap-2 mb-3">
-        <input className="input-field sm:max-w-sm" placeholder="Buscar por nombre o código de barras…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select className="input-field sm:max-w-[220px]" value={filter} onChange={(e) => setFilter(e.target.value)} aria-label="Filtrar">
-          <option value="all">Todos los productos</option>
-          <option value="low">Stock mínimo o agotados</option>
-          <option value="expiry">Vencidos o por vencer</option>
-        </select>
+      <div className="row g-2 mb-3">
+        <div className="col-md-6 col-lg-5">
+          <div className="input-group">
+            <span className="input-group-text bg-transparent"><Icon name="search" /></span>
+            <input className="form-control" placeholder="Buscar por nombre o código de barras…" value={q} onChange={(e) => setQ(e.target.value)} />
+          </div>
+        </div>
+        <div className="col-md-4 col-lg-3">
+          <select className="form-select" value={filter} onChange={(e) => setFilter(e.target.value)} aria-label="Filtrar">
+            <option value="all">Todos los productos</option>
+            <option value="low">Stock mínimo o agotados</option>
+            <option value="expiry">Vencidos o por vencer</option>
+          </select>
+        </div>
+        <div className="col-md-2 col-lg-4 d-flex align-items-center justify-content-md-end small text-body-secondary">
+          {shown.length} de {items.length} productos
+        </div>
       </div>
       {inventory.loading && !inventory.data ? (
         <Loading />
       ) : shown.length === 0 ? (
-        <Empty>No hay productos que coincidan.</Empty>
+        <Empty icon="search">No hay productos que coincidan.</Empty>
       ) : (
         <Table>
           <thead>
@@ -149,18 +162,20 @@ function StockTable({ inventory, isWarehouse, onEntry, onAdjust }) {
               const ex = expiryState(p.fecha_vencimiento)
               return (
                 <tr key={i.id}>
-                  <td className="tabular text-muted">{p.codigo_barras}</td>
-                  <td className="font-medium">{p.nombre}</td>
-                  <td className="text-muted">{p.categoria?.nombre}</td>
+                  <td className="tabular text-body-secondary small">{p.codigo_barras}</td>
+                  <td className="fw-medium">{p.nombre}</td>
+                  <td className="text-body-secondary">{p.categoria?.nombre}</td>
                   <td className="num">{money(p.precio)}</td>
-                  <td className="num font-semibold">{i.stock_actual} <span className="text-muted font-normal">{UNIT_SHORT[p.unidad_medida]}</span></td>
-                  <td className="num text-muted">{i.stock_minimo}</td>
+                  <td className="num fw-semibold">{i.stock_actual} <span className="text-body-secondary fw-normal small">{UNIT_SHORT[p.unidad_medida]}</span></td>
+                  <td className="num text-body-secondary">{i.stock_minimo}</td>
                   <td><Badge tone={st.tone}>{st.label}</Badge></td>
                   <td><Badge tone={ex.tone}>{ex.label}</Badge></td>
                   {isWarehouse && (
-                    <td className="text-right whitespace-nowrap">
-                      <Button variant="ghost" className="!py-1 !px-2 text-xs" onClick={() => onEntry(i.producto_id)}>Entrada</Button>{' '}
-                      <Button variant="ghost" className="!py-1 !px-2 text-xs" onClick={() => onAdjust(i.producto_id)}>Ajuste</Button>
+                    <td className="text-end text-nowrap">
+                      <div className="btn-group btn-group-sm">
+                        <button type="button" className="btn btn-outline-secondary" onClick={() => onEntry(i.producto_id)} title="Entrada"><Icon name="box-arrow-in-down" /></button>
+                        <button type="button" className="btn btn-outline-secondary" onClick={() => onAdjust(i.producto_id)} title="Ajuste"><Icon name="sliders" /></button>
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -220,16 +235,21 @@ function StockModal({ kind, initialProduct, inventory, onClose, onDone }) {
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" form="stock-form" disabled={busy || !productId || !validQty || (!isEntry && !reason.trim()) || resulting < 0}>
+          <Button
+            type="submit"
+            form="stock-form"
+            icon="check-lg"
+            disabled={busy || !productId || !validQty || (!isEntry && !reason.trim()) || resulting < 0}
+          >
             {busy ? 'Guardando…' : 'Registrar'}
           </Button>
         </>
       }
     >
-      <form id="stock-form" onSubmit={submit} className="flex flex-col gap-4">
+      <form id="stock-form" onSubmit={submit} className="vstack gap-3">
         <Notice tone="error">{error}</Notice>
         <Field label="Producto">
-          <select className="input-field" value={productId} onChange={(e) => setProductId(e.target.value)} required autoFocus>
+          <select className="form-select" value={productId} onChange={(e) => setProductId(e.target.value)} required autoFocus>
             <option value="">Selecciona un producto…</option>
             {inventory.map((i) => (
               <option key={i.id} value={i.producto_id}>
@@ -240,40 +260,57 @@ function StockModal({ kind, initialProduct, inventory, onClose, onDone }) {
         </Field>
 
         {!isEntry && (
-          <Field label="Tipo de ajuste" hint={adj.hint}>
-            <div className="grid grid-cols-2 gap-2">
+          <div>
+            <div className="form-label">Tipo de ajuste</div>
+            <div className="row g-2">
               {ADJUSTMENT_TYPES.map((t) => (
-                <button key={t.value} type="button" onClick={() => { setType(t.value); setDirection('out') }} className={type === t.value ? 'btn-primary' : 'btn-ghost'}>
-                  {t.label}
-                </button>
+                <div className="col-6" key={t.value}>
+                  <input type="radio" className="btn-check" name="adj" id={`adj-${t.value}`} checked={type === t.value} onChange={() => { setType(t.value); setDirection('out') }} />
+                  <label className="btn btn-outline-primary w-100 btn-icon justify-content-center" htmlFor={`adj-${t.value}`}>
+                    <Icon name={ADJ_ICONS[t.value]} /> {t.label}
+                  </label>
+                </div>
               ))}
             </div>
-          </Field>
+            <div className="form-text">{adj.hint}</div>
+          </div>
         )}
 
         {!isEntry && adj.direction === 'both' && (
-          <Field label="Sentido">
-            <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => setDirection('in')} className={direction === 'in' ? 'btn-primary' : 'btn-ghost'}>
-                {type === 'devolucion' ? 'Devolución de cliente (+)' : 'Sumar unidades (+)'}
-              </button>
-              <button type="button" onClick={() => setDirection('out')} className={direction === 'out' ? 'btn-primary' : 'btn-ghost'}>
-                {type === 'devolucion' ? 'Devolución a proveedor (−)' : 'Restar unidades (−)'}
-              </button>
-            </div>
-          </Field>
+          <div className="btn-group w-100" role="group" aria-label="Sentido">
+            <input type="radio" className="btn-check" name="dir" id="dir-in" checked={direction === 'in'} onChange={() => setDirection('in')} />
+            <label className="btn btn-outline-success" htmlFor="dir-in">
+              <Icon name="plus-circle" className="me-1" />{type === 'devolucion' ? 'Devolución de cliente' : 'Sumar unidades'}
+            </label>
+            <input type="radio" className="btn-check" name="dir" id="dir-out" checked={direction === 'out'} onChange={() => setDirection('out')} />
+            <label className="btn btn-outline-danger" htmlFor="dir-out">
+              <Icon name="dash-circle" className="me-1" />{type === 'devolucion' ? 'Devolución a proveedor' : 'Restar unidades'}
+            </label>
+          </div>
         )}
 
         <Field
           label={isEntry ? 'Unidades recibidas' : 'Unidades'}
           error={qty !== '' && !validQty ? 'Ingresa un número entero mayor que cero (HU019).' : resulting < 0 ? 'El stock no puede quedar negativo.' : ''}
-          hint={resulting != null ? `Stock actual ${item.stock_actual} → quedará en ${resulting}` : ''}
         >
-          <input className="input-field" type="number" min="1" step="1" value={qty} onChange={(e) => setQty(e.target.value)} required />
+          <input className="form-control" type="number" min="1" step="1" value={qty} onChange={(e) => setQty(e.target.value)} required />
         </Field>
+        {resulting != null && resulting >= 0 && (
+          <div className="d-flex align-items-center gap-2 small">
+            <span className="text-body-secondary">Stock</span>
+            <Badge tone="neutral">{item.stock_actual}</Badge>
+            <Icon name="arrow-right" className="text-body-secondary" />
+            <Badge tone={sign > 0 ? 'success' : 'warning'}>{resulting}</Badge>
+          </div>
+        )}
 
         <Field label={isEntry ? 'Proveedor / factura (opcional)' : 'Motivo (obligatorio)'}>
-          <input className="input-field" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={isEntry ? 'p. ej. Factura 4521 — Distribuidora XYZ' : 'Describe el motivo del ajuste'} />
+          <input
+            className="form-control"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder={isEntry ? 'p. ej. Factura 4521 — Distribuidora XYZ' : 'Describe el motivo del ajuste'}
+          />
         </Field>
       </form>
     </Modal>
@@ -295,23 +332,29 @@ function Movements() {
     <Card>
       <Notice tone="error">{error}</Notice>
       <form
-        className="flex flex-col sm:flex-row gap-2 mb-3"
+        className="row g-2 mb-3"
         onSubmit={(e) => {
           e.preventDefault()
           setQuery(product.trim())
         }}
       >
-        <select className="input-field sm:max-w-[260px]" value={tipo} onChange={(e) => setTipo(e.target.value)} aria-label="Tipo de movimiento">
-          <option value="">Todos los movimientos</option>
-          {Object.entries(MOVEMENT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-        <input className="input-field sm:max-w-sm" placeholder="Producto o código…" value={product} onChange={(e) => setProduct(e.target.value)} />
-        <Button type="submit" variant="ghost">Buscar</Button>
+        <div className="col-md-4">
+          <select className="form-select" value={tipo} onChange={(e) => setTipo(e.target.value)} aria-label="Tipo de movimiento">
+            <option value="">Todos los movimientos</option>
+            {Object.entries(MOVEMENT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+        </div>
+        <div className="col-md-5">
+          <input className="form-control" placeholder="Producto o código…" value={product} onChange={(e) => setProduct(e.target.value)} />
+        </div>
+        <div className="col-md-auto">
+          <Button type="submit" variant="ghost" icon="search">Buscar</Button>
+        </div>
       </form>
       {loading && !data ? (
         <Loading />
       ) : rows.length === 0 ? (
-        <Empty>Sin movimientos para este filtro.</Empty>
+        <Empty icon="clock-history">Sin movimientos para este filtro.</Empty>
       ) : (
         <Table>
           <thead>
@@ -328,15 +371,15 @@ function Movements() {
           <tbody>
             {rows.map((m) => (
               <tr key={m.id}>
-                <td className="whitespace-nowrap">{dateTime(m.fecha)}</td>
-                <td className="font-medium">{m.inventario?.producto?.nombre}</td>
-                <td className="whitespace-nowrap">{MOVEMENT_LABELS[m.tipo] || m.tipo}</td>
-                <td className="num font-semibold" style={{ color: m.cantidad >= 0 ? 'var(--color-success)' : 'var(--color-error)' }}>
+                <td className="text-nowrap small">{dateTime(m.fecha)}</td>
+                <td className="fw-medium">{m.inventario?.producto?.nombre}</td>
+                <td className="text-nowrap">{MOVEMENT_LABELS[m.tipo] || m.tipo}</td>
+                <td className={`num fw-semibold ${m.cantidad >= 0 ? 'text-success' : 'text-danger'}`}>
                   {m.cantidad > 0 ? `+${m.cantidad}` : m.cantidad}
                 </td>
                 <td className="num">{m.stock_final}</td>
                 <td>{m.usuario?.nombre}</td>
-                <td className="text-muted">{m.motivo}</td>
+                <td className="text-body-secondary small">{m.motivo}</td>
               </tr>
             ))}
           </tbody>
@@ -365,40 +408,41 @@ function BinarySearchDemo() {
   }
 
   return (
-    <Card title="Búsqueda binaria — coincidencia exacta" actions={<span className="text-xs text-muted">MergeSort O(n log n) + búsqueda O(log n)</span>}>
-      <form onSubmit={search} className="flex flex-col sm:flex-row gap-3 sm:items-end">
-        <Field label="Nombre exacto del producto" className="flex-1">
-          <input className="input-field" value={name} onChange={(e) => setName(e.target.value)} placeholder="p. ej. Arroz Diana 1 kg" />
-        </Field>
-        <Field label="Variante">
-          <div className="inline-flex rounded-md overflow-hidden" style={{ border: '1px solid var(--color-border)' }} role="radiogroup">
+    <Card
+      title="Búsqueda binaria — coincidencia exacta"
+      actions={<span className="small text-body-secondary">MergeSort O(n log n) + búsqueda O(log n)</span>}
+    >
+      <form onSubmit={search} className="row g-2 align-items-end">
+        <div className="col-md">
+          <Field label="Nombre exacto del producto">
+            <input className="form-control" value={name} onChange={(e) => setName(e.target.value)} placeholder="p. ej. Arroz Diana 1 kg" />
+          </Field>
+        </div>
+        <div className="col-auto">
+          <div className="form-label">Variante</div>
+          <div className="btn-group" role="group">
             {[['iterative', 'Iterativa'], ['recursive', 'Recursiva']].map(([k, label]) => (
-              <button
-                key={k}
-                type="button"
-                role="radio"
-                aria-checked={algo === k}
-                onClick={() => setAlgo(k)}
-                className="px-3 py-2 text-sm font-semibold"
-                style={{ backgroundColor: algo === k ? 'var(--color-brand-primary)' : 'transparent', color: algo === k ? 'var(--color-brand-dark)' : 'var(--color-text-primary)' }}
-              >
-                {label}
-              </button>
+              <Fragment key={k}>
+                <input type="radio" className="btn-check" name="algo" id={`algo-${k}`} checked={algo === k} onChange={() => setAlgo(k)} />
+                <label className="btn btn-outline-primary" htmlFor={`algo-${k}`}>{label}</label>
+              </Fragment>
             ))}
           </div>
-        </Field>
-        <Button type="submit" disabled={!name.trim()}>Buscar</Button>
+        </div>
+        <div className="col-auto">
+          <Button type="submit" icon="search" disabled={!name.trim()}>Buscar</Button>
+        </div>
       </form>
-      <Notice tone="error">{error}</Notice>
+      <div className="mt-3"><Notice tone="error">{error}</Notice></div>
       {result && (
-        <div className="mt-3 text-sm">
-          <Badge tone="info">Variante: {result.algo === 'iterative' ? 'iterativa' : 'recursiva'}</Badge>{' '}
+        <div className="small d-flex flex-wrap align-items-center gap-2">
+          <Badge tone="info">Variante {result.algo === 'iterative' ? 'iterativa' : 'recursiva'}</Badge>
           {result.found ? (
             <span>
               Encontrado: <strong>{result.item.producto?.nombre}</strong> · stock {result.item.stock_actual} · {money(result.item.producto?.precio)}
             </span>
           ) : (
-            <span className="text-muted">No existe un producto con ese nombre exacto en esta tienda.</span>
+            <span className="text-body-secondary">No existe un producto con ese nombre exacto en esta tienda.</span>
           )}
         </div>
       )}

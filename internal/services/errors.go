@@ -23,7 +23,7 @@ var (
 	ErrVenueNameRequired = errors.New("el nombre de la tienda es obligatorio")
 	ErrVenueAddrRequired = errors.New("la dirección de la tienda es obligatoria")
 	ErrVenueNameTaken    = errors.New("ya existe una tienda con ese nombre")
-	ErrInvalidColor      = errors.New("el color debe ser hexadecimal, por ejemplo #4ADE80")
+	ErrInvalidColor      = errors.New("el color debe ser hexadecimal, por ejemplo #16A34A")
 	ErrStoreInactive     = errors.New("la tienda asignada a este usuario está inactiva")
 )
 

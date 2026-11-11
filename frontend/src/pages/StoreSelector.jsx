@@ -3,23 +3,22 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { useAuth } from '../context/AuthContext'
 import { money, number } from '../lib/format'
-import { Badge, Button, Field, Loading, Modal, Notice, PageHeader, Stat, useApi } from '../components/ui'
-
-const PALETTE = ['#4ADE80', '#60A5FA', '#F472B6', '#FBBF24', '#A78BFA', '#2DD4BF', '#FB923C', '#F87171']
+import { STORE_PALETTE } from '../lib/theme'
+import { Badge, Button, Field, Icon, Loading, Modal, Notice, PageHeader, Stat, useApi } from '../components/ui'
 
 /**
  * Selector de tiendas — pantalla inicial del administrador general.
  *
  * Muestra cada tienda con su color y sus indicadores del día, el consolidado
  * de todas las tiendas, y permite crear, configurar e inactivar tiendas
- * (RF-01 / CU-09 / RN-06). Al elegir "Administrar" la aplicación entra en
- * el contexto de esa tienda: todas las pantallas pasan a mostrar sus datos.
+ * (RF-01 / CU-09 / RN-06). Al elegir "Administrar" la aplicación entra en el
+ * contexto de esa tienda: todas las pantallas pasan a mostrar sus datos.
  */
 export default function StoreSelector() {
   const { selectStore } = useAuth()
   const navigate = useNavigate()
   const { data, error, loading, reload } = useApi('/venues/overview')
-  const [editing, setEditing] = useState(null) // null | {} (nueva) | tienda
+  const [editing, setEditing] = useState(null)
   const [notice, setNotice] = useState('')
   const [actionError, setActionError] = useState('')
 
@@ -33,7 +32,6 @@ export default function StoreSelector() {
   }
 
   async function toggle(s) {
-    const verb = s.activa ? 'inactivar' : 'activar'
     if (s.activa && !window.confirm(`¿Inactivar la tienda ${s.nombre}? Su personal no podrá iniciar sesión hasta reactivarla.`)) return
     setActionError('')
     try {
@@ -41,7 +39,7 @@ export default function StoreSelector() {
       setNotice(`Tienda ${s.nombre} ${s.activa ? 'inactivada' : 'activada'}.`)
       reload()
     } catch (e) {
-      setActionError(`No se pudo ${verb}: ${e.message}`)
+      setActionError(e.message)
     }
   }
 
@@ -52,8 +50,8 @@ export default function StoreSelector() {
         subtitle="Elige una tienda para operar sobre ella, o revisa el consolidado de todas."
         actions={
           <>
-            <Button variant="ghost" onClick={() => navigate('/panel')}>Ver consolidado</Button>
-            <Button onClick={() => setEditing({})}>+ Nueva tienda</Button>
+            <Button variant="ghost" icon="graph-up" onClick={() => navigate('/panel')}>Ver consolidado</Button>
+            <Button icon="plus-lg" onClick={() => setEditing({})}>Nueva tienda</Button>
           </>
         }
       />
@@ -65,17 +63,19 @@ export default function StoreSelector() {
         <Loading />
       ) : (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-8">
-            <Stat label="Tiendas activas" value={`${active.length} / ${stores.length}`} tone="neutral" />
-            <Stat label="Ventas de hoy" value={number(sum('ventas_hoy'))} tone="brand" />
-            <Stat label="Total vendido hoy" value={money(sum('total_hoy'))} tone="success" />
-            <Stat label="Alertas" value={number(sum('stock_bajo') + sum('vencidos') + sum('por_vencer'))} tone="warning" hint="Stock mínimo y vencimientos" />
-            <Stat label="Inventario a costo" value={money(sum('valor_inventario'))} tone="accent" />
+          <div className="row g-3 mb-4 row-cols-2 row-cols-md-3 row-cols-xl-5">
+            <div className="col"><Stat icon="shop" label="Tiendas activas" value={`${active.length} / ${stores.length}`} tone="neutral" /></div>
+            <div className="col"><Stat icon="receipt" label="Ventas de hoy" value={number(sum('ventas_hoy'))} /></div>
+            <div className="col"><Stat icon="cash-coin" label="Total vendido hoy" value={money(sum('total_hoy'))} tone="success" /></div>
+            <div className="col"><Stat icon="bell" label="Alertas" value={number(sum('stock_bajo') + sum('vencidos') + sum('por_vencer'))} tone="warning" hint="Stock mínimo y vencimientos" /></div>
+            <div className="col"><Stat icon="boxes" label="Inventario a costo" value={money(sum('valor_inventario'))} tone="info" /></div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="row g-4 row-cols-1 row-cols-md-2 row-cols-xxl-3">
             {stores.map((s) => (
-              <StoreCard key={s.id} s={s} onEnter={() => enter(s)} onEdit={() => setEditing(s)} onToggle={() => toggle(s)} />
+              <div className="col" key={s.id}>
+                <StoreCard s={s} onEnter={() => enter(s)} onEdit={() => setEditing(s)} onToggle={() => toggle(s)} />
+              </div>
             ))}
           </div>
         </>
@@ -99,56 +99,52 @@ export default function StoreSelector() {
 function StoreCard({ s, onEnter, onEdit, onToggle }) {
   const alerts = s.stock_bajo + s.vencidos + s.por_vencer
   return (
-    <article
-      className="rounded-xl overflow-hidden flex flex-col"
-      style={{
-        backgroundColor: 'var(--color-bg-surface)',
-        border: `1px solid ${s.activa ? s.color + '66' : 'var(--color-border)'}`,
-        opacity: s.activa ? 1 : 0.6,
-      }}
-    >
-      <div style={{ height: 6, backgroundColor: s.color }} />
-      <div className="p-5 flex flex-col gap-4 flex-1">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-xl font-bold truncate" style={{ color: s.color }}>{s.nombre}</h2>
-            <p className="text-xs text-muted truncate">{s.direccion}</p>
-            {s.telefono && <p className="text-xs text-muted">Tel. {s.telefono}</p>}
+    <article className="card store-card h-100" style={{ opacity: s.activa ? 1 : 0.6 }}>
+      <div className="store-band" style={{ backgroundColor: s.color }} />
+      <div className="card-body d-flex flex-column gap-3">
+        <div className="d-flex align-items-start gap-3">
+          <div className="store-avatar" style={{ backgroundColor: s.color }}><Icon name="shop" /></div>
+          <div className="min-w-0 flex-grow-1">
+            <h2 className="h5 fw-bold mb-0 text-truncate">{s.nombre}</h2>
+            <div className="small text-body-secondary text-truncate"><Icon name="geo-alt" className="me-1" />{s.direccion}</div>
+            {s.telefono && <div className="small text-body-secondary"><Icon name="telephone" className="me-1" />{s.telefono}</div>}
           </div>
           <Badge tone={s.activa ? 'success' : 'neutral'}>{s.activa ? 'Activa' : 'Inactiva'}</Badge>
         </div>
 
-        <dl className="grid grid-cols-3 gap-2 text-center">
-          <Mini label="Ventas hoy" value={number(s.ventas_hoy)} sub={money(s.total_hoy)} />
-          <Mini label="Productos" value={number(s.productos)} sub={money(s.valor_inventario)} />
-          <Mini label="Personal" value={number(s.personal)} sub={`${s.turnos_abiertos} en turno`} />
-        </dl>
+        <div className="row g-2 text-center">
+          <div className="col-4"><Mini label="Ventas hoy" value={number(s.ventas_hoy)} sub={money(s.total_hoy)} /></div>
+          <div className="col-4"><Mini label="Productos" value={number(s.productos)} sub={money(s.valor_inventario)} /></div>
+          <div className="col-4"><Mini label="Personal" value={number(s.personal)} sub={`${s.turnos_abiertos} en turno`} /></div>
+        </div>
 
-        <div className="flex flex-wrap gap-1.5">
+        <div className="d-flex flex-wrap gap-1">
           {alerts === 0 ? (
-            <Badge tone="success">Sin alertas</Badge>
+            <Badge tone="success" icon="check2">Sin alertas</Badge>
           ) : (
             <>
-              {s.stock_bajo > 0 && <Badge tone="warning">{s.stock_bajo} en stock mínimo</Badge>}
-              {s.vencidos > 0 && <Badge tone="error">{s.vencidos} vencido(s)</Badge>}
-              {s.por_vencer > 0 && <Badge tone="info">{s.por_vencer} por vencer</Badge>}
+              {s.stock_bajo > 0 && <Badge tone="warning" icon="arrow-down-circle">{s.stock_bajo} en stock mínimo</Badge>}
+              {s.vencidos > 0 && <Badge tone="error" icon="x-octagon">{s.vencidos} vencido(s)</Badge>}
+              {s.por_vencer > 0 && <Badge tone="info" icon="hourglass-split">{s.por_vencer} por vencer</Badge>}
             </>
           )}
           {s.pedidos_abiertos > 0 && <Badge tone="neutral">{s.pedidos_abiertos} venta(s) abiertas</Badge>}
         </div>
 
-        <div className="mt-auto flex flex-wrap gap-2 pt-1">
+        <div className="mt-auto d-flex flex-wrap gap-2">
           <button
             type="button"
             onClick={onEnter}
             disabled={!s.activa}
-            className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: s.color }}
+            className="btn text-white flex-grow-1 btn-icon justify-content-center"
+            style={{ backgroundColor: s.color, borderColor: s.color }}
           >
-            Administrar tienda →
+            Administrar tienda <Icon name="arrow-right" />
           </button>
-          <Button variant="ghost" onClick={onEdit}>Configurar</Button>
-          <Button variant={s.activa ? 'danger' : 'ghost'} onClick={onToggle}>
+          <Button variant="ghost" icon="gear" onClick={onEdit} aria-label="Configurar">
+            <span className="d-none d-sm-inline">Configurar</span>
+          </Button>
+          <Button variant={s.activa ? 'danger' : 'ghost'} icon={s.activa ? 'pause-circle' : 'play-circle'} onClick={onToggle}>
             {s.activa ? 'Inactivar' : 'Activar'}
           </Button>
         </div>
@@ -159,10 +155,10 @@ function StoreCard({ s, onEnter, onEdit, onToggle }) {
 
 function Mini({ label, value, sub }) {
   return (
-    <div className="rounded-lg px-2 py-2" style={{ backgroundColor: 'var(--color-bg-elevated)' }}>
-      <dt className="text-[10px] uppercase tracking-wide text-muted">{label}</dt>
-      <dd className="text-lg font-bold tabular">{value}</dd>
-      <dd className="text-[11px] text-muted truncate">{sub}</dd>
+    <div className="mini-stat h-100">
+      <div className="lbl">{label}</div>
+      <div className="val">{value}</div>
+      <div className="sub text-truncate">{sub}</div>
     </div>
   )
 }
@@ -173,7 +169,7 @@ function StoreModal({ store, onClose, onSaved }) {
     nombre: store.nombre || '',
     direccion: store.direccion || '',
     telefono: store.telefono || '',
-    color: store.color || PALETTE[3],
+    color: store.color || STORE_PALETTE[3],
   })
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -200,34 +196,40 @@ function StoreModal({ store, onClose, onSaved }) {
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" form="store-form" disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</Button>
+          <Button type="submit" form="store-form" disabled={saving} icon="check-lg">{saving ? 'Guardando…' : 'Guardar'}</Button>
         </>
       }
     >
-      <form id="store-form" onSubmit={save} className="flex flex-col gap-4">
+      <form id="store-form" onSubmit={save} className="vstack gap-3">
         <Notice tone="error">{error}</Notice>
         <Field label="Nombre">
-          <input className="input-field" value={form.nombre} onChange={set('nombre')} required maxLength={100} autoFocus />
+          <input className="form-control" value={form.nombre} onChange={set('nombre')} required maxLength={100} autoFocus />
         </Field>
         <Field label="Dirección">
-          <input className="input-field" value={form.direccion} onChange={set('direccion')} required maxLength={255} />
+          <input className="form-control" value={form.direccion} onChange={set('direccion')} required maxLength={255} />
         </Field>
         <Field label="Teléfono">
-          <input className="input-field" value={form.telefono} onChange={set('telefono')} maxLength={30} />
+          <input className="form-control" value={form.telefono} onChange={set('telefono')} maxLength={30} />
         </Field>
         <Field label="Color de la tienda" hint="Se usa como color principal de la interfaz al operar esta tienda.">
-          <div className="flex flex-wrap items-center gap-2">
-            {PALETTE.map((c) => (
+          <div className="d-flex flex-wrap align-items-center gap-2">
+            {STORE_PALETTE.map((c) => (
               <button
                 key={c}
                 type="button"
                 onClick={() => setForm((f) => ({ ...f, color: c }))}
                 aria-label={`Color ${c}`}
-                className="w-8 h-8 rounded-md"
-                style={{ backgroundColor: c, outline: form.color.toUpperCase() === c ? '2px solid var(--color-text-primary)' : 'none', outlineOffset: 2 }}
+                className="rounded-3 border-0"
+                style={{
+                  width: 34,
+                  height: 34,
+                  backgroundColor: c,
+                  outline: form.color.toUpperCase() === c ? '3px solid var(--bs-body-color)' : 'none',
+                  outlineOffset: 2,
+                }}
               />
             ))}
-            <input type="color" value={form.color} onChange={set('color')} className="w-10 h-8 rounded cursor-pointer bg-transparent" aria-label="Otro color" />
+            <input type="color" value={form.color} onChange={set('color')} className="form-control form-control-color" aria-label="Otro color" />
           </div>
         </Field>
       </form>

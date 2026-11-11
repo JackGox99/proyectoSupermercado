@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Header from './Header'
 import Sidebar from './Sidebar'
 
 /**
- * Layout — marco de la aplicación:
- *   Header fijo arriba · Sidebar fijo a la izquierda (colapsable en móvil) · contenido.
+ * Marco de la aplicación: sidebar fijo (colapsable en pantallas pequeñas),
+ * encabezado y contenido.
  */
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -15,25 +15,16 @@ export default function Layout() {
     setSidebarOpen(false)
   }, [location.pathname])
 
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 768px)')
-    const handler = (e) => { if (e.matches) setSidebarOpen(false) }
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
-
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-base)' }}>
-      <Header onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
+    <>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <main
-        className="md:ml-60"
-        style={{ marginTop: 'var(--header-height)', minHeight: 'calc(100dvh - var(--header-height))' }}
-      >
-        <div className="p-4 md:p-6 lg:p-8 max-w-[1400px]">
+      {sidebarOpen && <div className="app-backdrop d-lg-none" onClick={() => setSidebarOpen(false)} aria-hidden="true" />}
+      <Header onMenuToggle={() => setSidebarOpen((o) => !o)} />
+      <main className="app-main">
+        <div className="app-content">
           <Outlet />
         </div>
       </main>
-    </div>
+    </>
   )
 }

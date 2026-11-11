@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { date } from '../lib/format'
-import { Badge, Empty, Loading, Notice, PageHeader, Table, Tabs, useApi } from '../components/ui'
+import { Badge, Card, Empty, Loading, Notice, PageHeader, Tabs, useApi } from '../components/ui'
 
 const TYPES = {
-  vencido: { label: 'Vencido — retirar', tone: 'error', order: 0 },
-  agotado: { label: 'Agotado', tone: 'error', order: 1 },
-  stock_minimo: { label: 'Stock mínimo', tone: 'warning', order: 2 },
-  por_vencer: { label: 'Próximo a vencer', tone: 'info', order: 3 },
+  vencido: { label: 'Vencido — retirar', tone: 'error', icon: 'x-octagon', order: 0 },
+  agotado: { label: 'Agotado', tone: 'error', icon: 'slash-circle', order: 1 },
+  stock_minimo: { label: 'Stock mínimo', tone: 'warning', icon: 'arrow-down-circle', order: 2 },
+  por_vencer: { label: 'Próximo a vencer', tone: 'info', icon: 'hourglass-split', order: 3 },
 }
 
 function detail(a) {
@@ -25,11 +25,11 @@ function detail(a) {
 }
 
 /** Lista de alertas reutilizable (también en el panel). */
-export function AlertList({ alerts, compact = false }) {
-  if (!alerts.length) return <Empty>Sin alertas: el inventario está al día. ✅</Empty>
+export function AlertList({ alerts, compact = false, flush = false }) {
+  if (!alerts.length) return <Empty icon="check2-circle">Sin alertas: el inventario está al día.</Empty>
   const sorted = [...alerts].sort((a, b) => TYPES[a.tipo].order - TYPES[b.tipo].order || a.producto.localeCompare(b.producto))
-  return (
-    <Table>
+  const table = (
+    <table className="table table-hover align-middle mb-0">
       <thead>
         <tr>
           <th>Tipo</th>
@@ -42,16 +42,17 @@ export function AlertList({ alerts, compact = false }) {
       <tbody>
         {sorted.map((a, i) => (
           <tr key={`${a.tipo}-${a.producto_id}-${i}`}>
-            <td><Badge tone={TYPES[a.tipo].tone}>{TYPES[a.tipo].label}</Badge></td>
-            <td className="font-medium">{a.producto}</td>
-            {!compact && <td className="tabular text-muted">{a.codigo_barras}</td>}
-            <td className="text-muted">{detail(a)}</td>
+            <td><Badge tone={TYPES[a.tipo].tone} icon={TYPES[a.tipo].icon}>{TYPES[a.tipo].label}</Badge></td>
+            <td className="fw-medium">{a.producto}</td>
+            {!compact && <td className="tabular text-body-secondary">{a.codigo_barras}</td>}
+            <td className="text-body-secondary small">{detail(a)}</td>
             <td className="num">{a.stock_actual}</td>
           </tr>
         ))}
       </tbody>
-    </Table>
+    </table>
   )
+  return <div className={`table-responsive app-table ${flush ? 'border-0 rounded-0 bg-transparent' : ''}`}>{table}</div>
 }
 
 /**
@@ -69,14 +70,15 @@ export default function Alerts() {
   return (
     <div>
       <PageHeader
+        icon="bell"
         title="Alertas de inventario"
         subtitle={`Stock mínimo y productos vencidos o que vencen en los próximos ${data?.expiry_window_days ?? 7} días.`}
       />
       <Notice tone="error">{error}</Notice>
       {rol === 'auxiliar_bodega' && alerts.length > 0 && (
         <Notice tone="info">
-          Repón existencias desde <Link to="/inventario?accion=entrada">Entrada de mercancía</Link> y retira los vencidos con un{' '}
-          <Link to="/inventario?accion=ajuste">ajuste por vencimiento</Link>.
+          Repón existencias desde <Link to="/inventario?accion=entrada" className="alert-link">Entrada de mercancía</Link> y
+          retira los vencidos con un <Link to="/inventario?accion=ajuste" className="alert-link">ajuste por vencimiento</Link>.
         </Notice>
       )}
       <Tabs
@@ -90,7 +92,7 @@ export default function Alerts() {
           { value: 'stock_minimo', label: 'Stock mínimo', count: count('stock_minimo') },
         ]}
       />
-      {loading && !data ? <Loading /> : <AlertList alerts={shown} />}
+      {loading && !data ? <Loading /> : <Card className="overflow-hidden" bodyClassName="p-0"><AlertList alerts={shown} flush /></Card>}
     </div>
   )
 }

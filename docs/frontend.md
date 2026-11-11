@@ -1,7 +1,7 @@
 # Frontend — guía técnica
 
-Cliente web (capa de presentación) en **React 18 + Vite + Tailwind CSS**, servido por
-nginx en producción. Interfaz en español, alineada a los roles de la Tabla 1.
+Cliente web (capa de presentación) en **React 18 + Vite + Bootstrap 5.3 + Bootstrap Icons**,
+servido por nginx en producción. Incluye modo claro y oscuro. Interfaz en español, alineada a los roles de la Tabla 1.
 
 ## Estructura
 
@@ -10,10 +10,11 @@ frontend/src/
 ├── api.js                    # Cliente HTTP: JWT, header X-Store-ID, errores, descargas
 ├── context/AuthContext.jsx   # Sesión + tienda activa + color de la tienda
 ├── lib/
+│   ├── theme.js              # Modo claro/oscuro y color de la tienda como --bs-primary
 │   ├── format.js             # Moneda COP, fechas, etiquetas (roles, estados, unidades…)
 │   └── nav.js                # Menú por rol y modo; ruta inicial de cada rol
 ├── components/
-│   ├── ui.jsx                # Card, Stat, Badge, Button, Modal, Field, Tabs, Table, useApi
+│   ├── ui.jsx                # Componentes Bootstrap: Card, Stat, Badge, Button, Modal, Field, Tabs, Table, Icon, useApi
 │   ├── ProtectedRoute.jsx    # Exige sesión, rol y/o tienda activa
 │   └── layout/               # Header (tienda activa), Sidebar, Layout
 └── pages/
@@ -39,8 +40,8 @@ frontend/src/
   esa tienda; *Cambiar tienda* (en el encabezado) vuelve al selector.
 - **Administrador de tienda, cajero y auxiliar de bodega** quedan fijos en su tienda.
 - La tienda activa se guarda en `localStorage` y `api.js` la envía en `X-Store-ID`.
-- Su color reemplaza `--color-brand-primary`: botones, navegación activa, encabezado y
-  badges cambian de color, así cada tienda se ve distinta.
+- Su color reemplaza el primario de Bootstrap (`--bs-primary`, ver `lib/theme.js`): botones,
+  navegación activa, encabezado y badges cambian de color, así cada tienda se ve distinta.
 
 ## Navegación por rol
 
@@ -72,9 +73,14 @@ administrador general no eligió una, lo envía al selector.
 
 ## Estilos
 
-Paleta en variables CSS (`src/index.css`) y clases de componentes (`btn-*`, `card`,
-`badge-*`, `notice-*`, `data-table`, `input-field`). Las clases que se arman
-dinámicamente están en el `safelist` de `tailwind.config.js`.
+- **Bootstrap 5.3** (solo CSS) y **Bootstrap Icons**, importados en `main.jsx`.
+- `src/index.css` es una capa delgada sobre Bootstrap: superficies y sombras, sidebar
+  oscuro, tarjetas de indicadores (`stat-card`), tablas (`app-table`), login y estilos de
+  impresión del comprobante.
+- Los modales y menús desplegables usan las clases de Bootstrap pero se controlan con
+  estado de React (no se carga el JavaScript de Bootstrap).
+- **Modo claro / oscuro**: `data-bs-theme` en `<html>`; se cambia desde el encabezado o el
+  login y se recuerda en `localStorage`.
 
 ## Cómo correrlo
 

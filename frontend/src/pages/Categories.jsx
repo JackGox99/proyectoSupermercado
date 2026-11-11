@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { api } from '../api'
-import { Button, Card, Empty, Field, Loading, Modal, Notice, PageHeader, Table, useApi } from '../components/ui'
+import { Button, Card, Empty, Field, Icon, Loading, Modal, Notice, PageHeader, Table, useApi } from '../components/ui'
 
 /**
  * Categorías — parámetro global de la plataforma que define el administrador
@@ -27,9 +27,10 @@ export default function Categories() {
   return (
     <div>
       <PageHeader
+        icon="collection"
         title="Categorías"
         subtitle="Parámetro global: las categorías se comparten entre todas las tiendas."
-        actions={<Button onClick={() => setEditing({})}>+ Nueva categoría</Button>}
+        actions={<Button icon="plus-lg" onClick={() => setEditing({})}>Nueva categoría</Button>}
       />
       <Notice tone="success" onClose={() => setNotice('')}>{notice}</Notice>
       <Notice tone="error" onClose={() => setActionError('')}>{actionError || error}</Notice>
@@ -37,7 +38,7 @@ export default function Categories() {
         {loading && !data ? (
           <Loading />
         ) : !data?.length ? (
-          <Empty>No hay categorías.</Empty>
+          <Empty icon="collection">No hay categorías.</Empty>
         ) : (
           <Table>
             <thead>
@@ -46,11 +47,13 @@ export default function Categories() {
             <tbody>
               {data.map((c) => (
                 <tr key={c.id}>
-                  <td className="font-medium">{c.nombre}</td>
-                  <td className="text-muted">{c.descripcion || '—'}</td>
-                  <td className="text-right whitespace-nowrap">
-                    <Button variant="ghost" className="!py-1 !px-2 text-xs" onClick={() => setEditing(c)}>Editar</Button>{' '}
-                    <Button variant="danger" className="!py-1 !px-2 text-xs" onClick={() => remove(c)}>Eliminar</Button>
+                  <td className="fw-medium"><Icon name="tag" className="me-2 text-primary" />{c.nombre}</td>
+                  <td className="text-body-secondary">{c.descripcion || '—'}</td>
+                  <td className="text-end text-nowrap">
+                    <div className="btn-group btn-group-sm">
+                      <button type="button" className="btn btn-outline-secondary" onClick={() => setEditing(c)} title="Editar"><Icon name="pencil" /></button>
+                      <button type="button" className="btn btn-outline-danger" onClick={() => remove(c)} title="Eliminar"><Icon name="trash3" /></button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -101,17 +104,17 @@ function CategoryModal({ category, onClose, onSaved }) {
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" form="cat-form" disabled={busy || !name.trim()}>Guardar</Button>
+          <Button type="submit" form="cat-form" icon="check-lg" disabled={busy || !name.trim()}>Guardar</Button>
         </>
       }
     >
-      <form id="cat-form" onSubmit={save} className="flex flex-col gap-4">
+      <form id="cat-form" onSubmit={save} className="vstack gap-3">
         <Notice tone="error">{error}</Notice>
         <Field label="Nombre">
-          <input className="input-field" value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} autoFocus />
+          <input className="form-control" value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} autoFocus />
         </Field>
         <Field label="Descripción">
-          <textarea className="input-field" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+          <textarea className="form-control" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
         </Field>
       </form>
     </Modal>

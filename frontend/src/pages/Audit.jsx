@@ -4,9 +4,9 @@ import { dateTime, ROLE_LABELS, todayISO } from '../lib/format'
 import { Badge, Button, Card, Empty, Field, Loading, Notice, PageHeader, Table, useApi } from '../components/ui'
 
 const RESULT = {
-  exito: { label: 'Éxito', tone: 'success' },
-  denegado: { label: 'Denegado', tone: 'error' },
-  fallido: { label: 'Fallido', tone: 'warning' },
+  exito: { label: 'Éxito', tone: 'success', icon: 'check2' },
+  denegado: { label: 'Denegado', tone: 'error', icon: 'shield-x' },
+  fallido: { label: 'Fallido', tone: 'warning', icon: 'exclamation-triangle' },
 }
 
 const ACTIONS = {
@@ -39,42 +39,47 @@ export default function Audit() {
   return (
     <div>
       <PageHeader
+        icon="shield-check"
         title="Bitácora de auditoría"
         subtitle={`Operaciones críticas e intentos de acceso no autorizados${store ? ` · tienda ${store.nombre}` : ' · todas las tiendas'}.`}
       />
       <Notice tone="error">{error}</Notice>
       <Card className="mb-4">
         <form
-          className="grid grid-cols-2 lg:grid-cols-[1fr_1fr_1.5fr_1fr_1fr_auto] gap-3 items-end"
+          className="row g-3 align-items-end"
           onSubmit={(e) => {
             e.preventDefault()
             setApplied(filters)
           }}
         >
-          <Field label="Desde"><input className="input-field" type="date" value={filters.from} onChange={set('from')} /></Field>
-          <Field label="Hasta"><input className="input-field" type="date" value={filters.to} onChange={set('to')} /></Field>
-          <Field label="Acción">
-            <select className="input-field" value={filters.accion} onChange={set('accion')}>
-              {Object.entries(ACTIONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
-          </Field>
-          <Field label="Usuario"><input className="input-field" value={filters.usuario} onChange={set('usuario')} placeholder="usuario…" /></Field>
-          <Field label="Resultado">
-            <select className="input-field" value={filters.resultado} onChange={set('resultado')}>
-              <option value="">Todos</option>
-              {Object.entries(RESULT).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-            </select>
-          </Field>
-          <Button type="submit">Filtrar</Button>
+          <div className="col-6 col-lg-2"><Field label="Desde"><input className="form-control" type="date" value={filters.from} onChange={set('from')} /></Field></div>
+          <div className="col-6 col-lg-2"><Field label="Hasta"><input className="form-control" type="date" value={filters.to} onChange={set('to')} /></Field></div>
+          <div className="col-md-4 col-lg-3">
+            <Field label="Acción">
+              <select className="form-select" value={filters.accion} onChange={set('accion')}>
+                {Object.entries(ACTIONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </Field>
+          </div>
+          <div className="col-md-4 col-lg-2"><Field label="Usuario"><input className="form-control" value={filters.usuario} onChange={set('usuario')} placeholder="usuario…" /></Field></div>
+          <div className="col-md-4 col-lg-2">
+            <Field label="Resultado">
+              <select className="form-select" value={filters.resultado} onChange={set('resultado')}>
+                <option value="">Todos</option>
+                {Object.entries(RESULT).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </Field>
+          </div>
+          <div className="col-lg-1"><Button type="submit" icon="funnel" className="w-100">Filtrar</Button></div>
         </form>
       </Card>
 
       {loading && !data ? (
         <Loading />
       ) : rows.length === 0 ? (
-        <Card><Empty>No hay registros para estos filtros.</Empty></Card>
+        <Card><Empty icon="shield-check">No hay registros para estos filtros.</Empty></Card>
       ) : (
-        <Table>
+        <Table small>
           <thead>
             <tr>
               <th>Fecha</th><th>Usuario</th><th>Rol</th><th>Acción</th><th>Resultado</th><th>Detalle</th><th>IP</th>
@@ -83,13 +88,13 @@ export default function Audit() {
           <tbody>
             {rows.map((r) => (
               <tr key={r.id}>
-                <td className="whitespace-nowrap">{dateTime(r.fecha)}</td>
-                <td className="font-medium">{r.username || '—'}</td>
-                <td className="text-muted whitespace-nowrap">{ROLE_LABELS[r.rol] || '—'}</td>
-                <td className="tabular whitespace-nowrap">{r.accion}{r.entidad_id ? ` #${r.entidad_id}` : ''}</td>
-                <td><Badge tone={RESULT[r.resultado]?.tone}>{RESULT[r.resultado]?.label}</Badge></td>
-                <td className="text-muted">{r.detalle || `${r.metodo} ${r.ruta}`}</td>
-                <td className="text-muted tabular">{r.ip}</td>
+                <td className="text-nowrap">{dateTime(r.fecha)}</td>
+                <td className="fw-medium">{r.username || '—'}</td>
+                <td className="text-body-secondary text-nowrap">{ROLE_LABELS[r.rol] || '—'}</td>
+                <td className="text-nowrap"><code className="small">{r.accion}</code>{r.entidad_id ? <span className="text-body-secondary"> #{r.entidad_id}</span> : ''}</td>
+                <td><Badge tone={RESULT[r.resultado]?.tone} icon={RESULT[r.resultado]?.icon}>{RESULT[r.resultado]?.label}</Badge></td>
+                <td className="text-body-secondary">{r.detalle || `${r.metodo} ${r.ruta}`}</td>
+                <td className="text-body-secondary tabular">{r.ip}</td>
               </tr>
             ))}
           </tbody>

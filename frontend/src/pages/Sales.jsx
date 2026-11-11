@@ -5,7 +5,9 @@ import { useAuth } from '../context/AuthContext'
 import {
   date, dateTime, expiryState, money, number, ORDER_STATES, orderTotal, PAYMENT_LABELS, todayISO, UNIT_SHORT,
 } from '../lib/format'
-import { Badge, Button, Card, Empty, Field, Loading, Modal, Notice, PageHeader, Table, Tabs, useApi } from '../components/ui'
+import { Badge, Button, Card, Empty, Field, Icon, Loading, Modal, Notice, PageHeader, Table, Tabs, useApi } from '../components/ui'
+
+const PAYMENT_ICONS = { efectivo: 'cash-stack', tarjeta_debito: 'credit-card', tarjeta_credito: 'credit-card-2-front' }
 
 /**
  * Ventas (CU-01).
@@ -29,6 +31,7 @@ function PointOfSale() {
   return (
     <div>
       <PageHeader
+        icon="upc-scan"
         title="Punto de venta"
         subtitle={current ? `Turno en curso ${current.hora_inicio}–${current.hora_fin}` : 'Registra ventas durante tu turno.'}
       />
@@ -65,20 +68,21 @@ function StartShift({ onStarted }) {
     <Card>
       <Notice tone="error">{error || err}</Notice>
       {scheduled ? (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold">Tienes un turno programado hoy</h2>
-            <p className="text-sm text-muted">
+        <div className="d-flex flex-column flex-md-row align-items-md-center gap-4 py-3">
+          <div className="stat-card"><div className="stat-icon tone-primary" style={{ width: 56, height: 56 }}><Icon name="clock-history" className="fs-4" /></div></div>
+          <div className="flex-grow-1">
+            <h2 className="h5 fw-semibold mb-1">Tienes un turno programado hoy</h2>
+            <p className="text-body-secondary mb-0">
               {date(scheduled.fecha)} · {scheduled.hora_inicio}–{scheduled.hora_fin}. Inícialo para registrar ventas: cada venta
               queda asociada a ti y a este turno (RN-09).
             </p>
           </div>
-          <Button onClick={start} disabled={busy}>{busy ? 'Iniciando…' : 'Iniciar turno'}</Button>
+          <Button size="lg" icon="play-fill" onClick={start} disabled={busy}>{busy ? 'Iniciando…' : 'Iniciar turno'}</Button>
         </div>
       ) : closed ? (
-        <Empty>Tu turno de hoy ya fue cerrado. Consulta el resumen en <Link to="/turnos">Mis turnos</Link>.</Empty>
+        <Empty icon="moon-stars">Tu turno de hoy ya fue cerrado. Consulta el resumen en <Link to="/turnos">Mis turnos</Link>.</Empty>
       ) : (
-        <Empty>No tienes un turno asignado para hoy. Solicítalo al administrador de tu tienda.</Empty>
+        <Empty icon="calendar-x">No tienes un turno asignado para hoy. Solicítalo al administrador de tu tienda.</Empty>
       )}
     </Card>
   )
@@ -112,23 +116,24 @@ function Register() {
   }
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-4">
-      <div className="min-w-0">
+    <div className="row g-4">
+      <div className="col-xl-8 col-xxl-9">
         <Notice tone="success" onClose={() => setNotice('')}>{notice}</Notice>
         <Notice tone="error" onClose={() => setError('')}>{error}</Notice>
 
-        <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
           {sales.map((s) => (
             <button
               key={s.id}
               type="button"
               onClick={() => setActiveId(s.id)}
-              className={s.id === activeId ? 'btn-primary' : 'btn-ghost'}
+              className={`btn btn-sm ${s.id === activeId ? 'btn-primary' : 'btn-outline-secondary'} btn-icon`}
             >
-              Venta #{s.id} · {(s.items || []).length} ítem(s)
+              <Icon name="receipt" /> Venta #{s.id}
+              <span className={`badge rounded-pill ${s.id === activeId ? 'bg-white text-dark' : 'bg-body-secondary text-body'}`}>{(s.items || []).length}</span>
             </button>
           ))}
-          <Button variant={sales.length ? 'ghost' : 'primary'} onClick={newSale}>+ Nueva venta</Button>
+          <Button size="sm" variant={sales.length ? 'ghost' : 'primary'} icon="plus-lg" onClick={newSale}>Nueva venta</Button>
         </div>
 
         {openSales.loading && !openSales.data ? (
@@ -147,12 +152,14 @@ function Register() {
           />
         ) : (
           <Card>
-            <Empty>No hay ventas abiertas. Pulsa “Nueva venta” y escanea el primer producto.</Empty>
+            <Empty icon="cart-plus">No hay ventas abiertas. Pulsa “Nueva venta” y escanea el primer producto.</Empty>
           </Card>
         )}
       </div>
 
-      <RecentSales onReceipt={setReceiptId} refreshKey={notice} />
+      <div className="col-xl-4 col-xxl-3">
+        <RecentSales onReceipt={setReceiptId} refreshKey={notice} />
+      </div>
 
       {charging && (
         <ChargeModal
@@ -234,125 +241,135 @@ function SaleEditor({ orderId, inventory, onCharge, onCancelled, onChanged }) {
 
   const items = order?.items || []
   const total = orderTotal(order)
+  const units = items.reduce((a, i) => a + i.cantidad, 0)
 
   return (
-    <Card>
-      <Notice tone="error">{loadError || error}</Notice>
+    <div className="card">
+      <div className="card-body">
+        <Notice tone="error">{loadError || error}</Notice>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (code.trim()) add({ barcode: code.trim() })
-        }}
-        className="grid grid-cols-[1fr_90px_auto] gap-2 items-end mb-3"
-      >
-        <Field label="Código de barras (lector o teclado)">
-          <input
-            ref={codeRef}
-            className="input-field tabular"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="Escanea el producto…"
-            inputMode="numeric"
-            autoComplete="off"
-          />
-        </Field>
-        <Field label="Cantidad">
-          <input className="input-field" type="number" min="1" step="1" value={qty} onChange={(e) => setQty(e.target.value)} />
-        </Field>
-        <Button type="submit" disabled={busy || !code.trim()}>Agregar</Button>
-      </form>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (code.trim()) add({ barcode: code.trim() })
+          }}
+          className="row g-2 align-items-end mb-3"
+        >
+          <div className="col-12 col-md">
+            <label className="form-label" htmlFor="barcode">Código de barras (lector o teclado)</label>
+            <div className="input-group input-group-lg">
+              <span className="input-group-text"><Icon name="upc-scan" /></span>
+              <input
+                id="barcode"
+                ref={codeRef}
+                className="form-control tabular"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Escanea el producto…"
+                inputMode="numeric"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+          <div className="col-5 col-md-2">
+            <label className="form-label" htmlFor="qty">Cantidad</label>
+            <input id="qty" className="form-control form-control-lg" type="number" min="1" step="1" value={qty} onChange={(e) => setQty(e.target.value)} />
+          </div>
+          <div className="col-7 col-md-auto">
+            <Button type="submit" size="lg" icon="plus-lg" className="w-100" disabled={busy || !code.trim()}>Agregar</Button>
+          </div>
+        </form>
 
-      <div className="relative mb-4">
-        <input
-          className="input-field"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="…o busca por nombre (mín. 2 letras)"
-          aria-label="Buscar producto por nombre"
-        />
-        {matches.length > 0 && (
-          <ul
-            className="absolute z-10 left-0 right-0 mt-1 rounded-md overflow-hidden shadow-xl"
-            style={{ backgroundColor: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)' }}
-          >
-            {matches.map((i) => {
-              const exp = expiryState(i.producto.fecha_vencimiento)
-              const blocked = exp.days != null && exp.days < 0
-              return (
-                <li key={i.id}>
+        <div className="position-relative mb-4">
+          <div className="input-group">
+            <span className="input-group-text bg-transparent"><Icon name="search" /></span>
+            <input
+              className="form-control"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="…o busca por nombre (mín. 2 letras)"
+              aria-label="Buscar producto por nombre"
+            />
+          </div>
+          {matches.length > 0 && (
+            <div className="search-results list-group list-group-flush">
+              {matches.map((i) => {
+                const exp = expiryState(i.producto.fecha_vencimiento)
+                const blocked = exp.days != null && exp.days < 0
+                return (
                   <button
+                    key={i.id}
                     type="button"
                     disabled={blocked}
                     onClick={() => add({ product_id: i.producto_id })}
-                    className="w-full text-left px-3 py-2 text-sm flex items-center justify-between gap-3 hover:bg-[var(--color-bg-surface)] disabled:opacity-50"
+                    className="list-group-item list-group-item-action d-flex align-items-center justify-content-between gap-3 bg-transparent"
                   >
-                    <span className="min-w-0 truncate">
-                      {i.producto.nombre} <span className="text-muted tabular">· {i.producto.codigo_barras}</span>
+                    <span className="min-w-0 text-truncate">
+                      <span className="fw-medium">{i.producto.nombre}</span>{' '}
+                      <span className="text-body-secondary small tabular">{i.producto.codigo_barras}</span>
                     </span>
-                    <span className="flex items-center gap-2 flex-shrink-0">
+                    <span className="d-flex align-items-center gap-2 flex-shrink-0">
                       {blocked && <Badge tone="error">Vencido</Badge>}
-                      <span className="text-muted">{i.stock_actual} disp.</span>
-                      <span className="font-semibold">{money(i.producto.precio)}</span>
+                      <span className="small text-body-secondary">{i.stock_actual} disp.</span>
+                      <span className="fw-semibold">{money(i.producto.precio)}</span>
                     </span>
                   </button>
-                </li>
-              )
-            })}
-          </ul>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {items.length === 0 ? (
+          <Empty icon="upc">Escanea el primer producto del cliente.</Empty>
+        ) : (
+          <Table>
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th className="num">Cant.</th>
+                <th className="num">Precio</th>
+                <th className="num">Subtotal</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((it) => (
+                <tr key={it.id}>
+                  <td>
+                    <div className="fw-medium">{it.producto?.nombre}</div>
+                    <div className="small text-body-secondary tabular">{it.producto?.codigo_barras}</div>
+                  </td>
+                  <td className="num">{it.cantidad} <span className="text-body-secondary small">{UNIT_SHORT[it.producto?.unidad_medida] || ''}</span></td>
+                  <td className="num">{money(it.precio_unitario)}</td>
+                  <td className="num fw-semibold">{money(it.precio_unitario * it.cantidad)}</td>
+                  <td className="text-end">
+                    <button type="button" onClick={() => remove(it.id)} className="btn btn-sm btn-link text-danger" aria-label="Quitar">
+                      <Icon name="trash3" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
         )}
       </div>
 
-      {items.length === 0 ? (
-        <Empty>Escanea el primer producto del cliente.</Empty>
-      ) : (
-        <Table>
-          <thead>
-            <tr>
-              <th>Producto</th>
-              <th className="num">Cant.</th>
-              <th className="num">Precio</th>
-              <th className="num">Subtotal</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((it) => (
-              <tr key={it.id}>
-                <td>
-                  <div className="font-medium">{it.producto?.nombre}</div>
-                  <div className="text-xs text-muted tabular">{it.producto?.codigo_barras}</div>
-                </td>
-                <td className="num">{it.cantidad} {UNIT_SHORT[it.producto?.unidad_medida] || ''}</td>
-                <td className="num">{money(it.precio_unitario)}</td>
-                <td className="num font-semibold">{money(it.precio_unitario * it.cantidad)}</td>
-                <td className="text-right">
-                  <button type="button" onClick={() => remove(it.id)} className="text-sm" style={{ color: 'var(--color-error)' }}>
-                    Quitar
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      )}
-
-      <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <Button variant="danger" onClick={cancel}>Cancelar venta</Button>
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <div className="text-xs uppercase text-muted">Total</div>
-            <div className="text-3xl font-bold tabular">{money(total)}</div>
+      <div className="card-footer bg-transparent d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 py-3">
+        <Button variant="danger" icon="x-circle" onClick={cancel}>Cancelar venta</Button>
+        <div className="d-flex align-items-center gap-4">
+          <div className="text-end">
+            <div className="small text-body-secondary">Total · {units} unidad(es)</div>
+            <div className="pos-total">{money(total)}</div>
           </div>
-          <Button variant="success" className="!px-6 !py-3 !text-base" disabled={!items.length} onClick={() => onCharge(order)}>
-            Cobrar
-          </Button>
+          <Button variant="success" size="lg" icon="cash-coin" disabled={!items.length} onClick={() => onCharge(order)}>Cobrar</Button>
         </div>
       </div>
-      <p className="mt-3 text-xs text-muted">
+      <div className="px-3 pb-3 small text-body-secondary">
+        <Icon name="info-circle" className="me-1" />
         Las existencias se validan al agregar cada producto y se descuentan solo al confirmar el pago (RN-02).
-      </p>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -392,42 +409,47 @@ function ChargeModal({ order, onClose, onPaid, onReceipt }) {
         onClose={onClose}
         footer={
           <>
-            <Button variant="ghost" onClick={() => onReceipt(order.id)}>Ver comprobante</Button>
-            <Button onClick={onClose}>Nueva venta</Button>
+            <Button variant="ghost" icon="receipt" onClick={() => onReceipt(order.id)}>Ver comprobante</Button>
+            <Button icon="plus-lg" onClick={onClose}>Nueva venta</Button>
           </>
         }
       >
         <div className="text-center mb-4">
-          <div className="text-xs uppercase text-muted">Total cobrado</div>
-          <div className="text-4xl font-bold" style={{ color: 'var(--color-success)' }}>{money(result.total)}</div>
-          <div className="text-sm text-muted">{PAYMENT_LABELS[result.metodo_pago]}</div>
+          <div className="d-inline-grid rounded-circle tone-success mb-2" style={{ width: 64, height: 64, placeItems: 'center' }}>
+            <Icon name="check-lg" className="fs-2" />
+          </div>
+          <div className="small text-body-secondary">Total cobrado</div>
+          <div className="display-6 fw-bold text-success">{money(result.total)}</div>
+          <div className="text-body-secondary"><Icon name={PAYMENT_ICONS[result.metodo_pago]} className="me-1" />{PAYMENT_LABELS[result.metodo_pago]}</div>
         </div>
 
         {result.cambio && result.cambio.total_cambio > 0 && (
-          <div className="rounded-md p-3 mb-4" style={{ border: '1px solid var(--color-border)' }}>
-            <div className="flex justify-between font-semibold mb-2">
-              <span>Cambio a entregar</span>
-              <span style={{ color: 'var(--color-success)' }}>{money(result.cambio.total_cambio)}</span>
-            </div>
-            <p className="text-xs text-muted mb-2">Desglose calculado con el algoritmo voraz según el efectivo de la caja:</p>
-            {result.cambio.denominaciones.map(({ denominacion, cantidad }) => (
-              <div key={denominacion} className="flex justify-between text-sm">
-                <span className="text-muted">{money(denominacion)}</span>
-                <span>× {cantidad}</span>
+          <div className={`card mb-3 ${result.cambio.cambio_exacto ? '' : 'border-danger'}`}>
+            <div className="card-body">
+              <div className="d-flex justify-content-between fw-semibold mb-1">
+                <span>Cambio a entregar</span>
+                <span className="text-success">{money(result.cambio.total_cambio)}</span>
               </div>
-            ))}
-            {!result.cambio.cambio_exacto && (
-              <p className="text-xs mt-2" style={{ color: 'var(--color-error)' }}>
-                La caja no tiene suelto suficiente para el cambio exacto.
-              </p>
-            )}
+              <p className="small text-body-secondary mb-2">Desglose calculado con el algoritmo voraz según el efectivo de la caja:</p>
+              <ul className="list-group list-group-flush small">
+                {result.cambio.denominaciones.map(({ denominacion, cantidad }) => (
+                  <li key={denominacion} className="list-group-item bg-transparent d-flex justify-content-between px-0 py-1">
+                    <span className="text-body-secondary">{money(denominacion)}</span>
+                    <span>× {cantidad}</span>
+                  </li>
+                ))}
+              </ul>
+              {!result.cambio.cambio_exacto && (
+                <p className="small text-danger mt-2 mb-0">La caja no tiene suelto suficiente para el cambio exacto.</p>
+              )}
+            </div>
           </div>
         )}
 
         {result.alerts?.length > 0 && (
           <Notice tone="warning">
             <strong>Alerta de stock mínimo (RN-11):</strong>
-            <ul className="mt-1 list-disc pl-5">
+            <ul className="mb-0 mt-1 ps-3">
               {result.alerts.map((a) => (
                 <li key={a.producto_id}>{a.producto}: quedan {a.stock_actual} (mínimo {a.stock_minimo})</li>
               ))}
@@ -445,30 +467,38 @@ function ChargeModal({ order, onClose, onPaid, onReceipt }) {
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Volver</Button>
-          <Button variant="success" onClick={pay} disabled={busy || insufficient}>{busy ? 'Procesando…' : `Confirmar ${money(total)}`}</Button>
+          <Button variant="success" icon="check2-circle" onClick={pay} disabled={busy || insufficient}>
+            {busy ? 'Procesando…' : `Confirmar ${money(total)}`}
+          </Button>
         </>
       }
     >
       <Notice tone="error">{error}</Notice>
-      <div className="text-center mb-5">
-        <div className="text-xs uppercase text-muted">Total a cobrar</div>
-        <div className="text-4xl font-bold tabular">{money(total)}</div>
+      <div className="text-center mb-4">
+        <div className="small text-body-secondary">Total a cobrar</div>
+        <div className="display-6 fw-bold tabular">{money(total)}</div>
       </div>
-      <Field label="Medio de pago">
-        <div className="grid grid-cols-3 gap-2">
-          {Object.entries(PAYMENT_LABELS).map(([k, label]) => (
-            <button key={k} type="button" onClick={() => setMethod(k)} className={method === k ? 'btn-primary' : 'btn-ghost'}>
-              {label}
-            </button>
-          ))}
-        </div>
-      </Field>
+      <div className="form-label">Medio de pago</div>
+      <div className="row g-2 mb-3">
+        {Object.entries(PAYMENT_LABELS).map(([k, label]) => (
+          <div className="col-4" key={k}>
+            <input type="radio" className="btn-check" name="pay" id={`pay-${k}`} checked={method === k} onChange={() => setMethod(k)} />
+            <label className="btn btn-outline-primary w-100 py-3 d-flex flex-column align-items-center gap-1" htmlFor={`pay-${k}`}>
+              <Icon name={PAYMENT_ICONS[k]} className="fs-4" />
+              <span className="small">{label}</span>
+            </label>
+          </div>
+        ))}
+      </div>
       {method === 'efectivo' && (
-        <Field label="Efectivo recibido (opcional, para calcular el cambio)" error={insufficient ? 'El monto recibido es menor que el total.' : ''} className="mt-4">
-          <input className="input-field tabular" type="number" min="0" step="50" value={tendered} onChange={(e) => setTendered(e.target.value)} placeholder={String(total)} />
-          <div className="flex flex-wrap gap-2 mt-2">
+        <Field label="Efectivo recibido (opcional, para calcular el cambio)" error={insufficient ? 'El monto recibido es menor que el total.' : ''}>
+          <div className="input-group">
+            <span className="input-group-text">$</span>
+            <input className="form-control tabular" type="number" min="0" step="50" value={tendered} onChange={(e) => setTendered(e.target.value)} placeholder={String(total)} />
+          </div>
+          <div className="d-flex flex-wrap gap-2 mt-2">
             {[total, 20000, 50000, 100000].filter((v, i, a) => v >= total && a.indexOf(v) === i).map((v) => (
-              <button key={v} type="button" className="btn-ghost !py-1 !px-2 text-xs" onClick={() => setTendered(String(v))}>{money(v)}</button>
+              <button key={v} type="button" className="btn btn-sm btn-outline-secondary" onClick={() => setTendered(String(v))}>{money(v)}</button>
             ))}
           </div>
         </Field>
@@ -481,24 +511,34 @@ function RecentSales({ onReceipt, refreshKey }) {
   const { data } = useApi('/orders?estado=pagado', [refreshKey])
   const today = todayISO()
   const todays = (data || []).filter((o) => (o.cerrado_at || '').slice(0, 10) === today)
+  const total = todays.reduce((a, o) => a + (o.pago?.total || 0), 0)
   return (
-    <aside className="card h-fit">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted mb-3">Mis ventas de hoy</h2>
+    <div className="card">
+      <div className="card-header d-flex justify-content-between align-items-center">
+        <h2 className="card-title-sm">Mis ventas de hoy</h2>
+        <span className="fw-semibold small">{money(total)}</span>
+      </div>
       {todays.length === 0 ? (
-        <p className="text-sm text-muted">Aún no hay ventas cobradas hoy.</p>
+        <div className="card-body small text-body-secondary">Aún no hay ventas cobradas hoy.</div>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <div className="list-group list-group-flush">
           {todays.slice(0, 12).map((o) => (
-            <li key={o.id} className="flex items-center justify-between gap-2 text-sm">
-              <button type="button" onClick={() => onReceipt(o.id)} className="text-left hover:underline">
-                #{o.id} <span className="text-muted">{dateTime(o.cerrado_at).split(',')[1]}</span>
-              </button>
-              <span className="font-semibold tabular">{money(o.pago?.total)}</span>
-            </li>
+            <button
+              key={o.id}
+              type="button"
+              onClick={() => onReceipt(o.id)}
+              className="list-group-item list-group-item-action bg-transparent d-flex justify-content-between align-items-center"
+            >
+              <span>
+                <span className="fw-medium">#{o.id}</span>{' '}
+                <span className="small text-body-secondary">{dateTime(o.cerrado_at).split(',')[1]}</span>
+              </span>
+              <span className="fw-semibold tabular">{money(o.pago?.total)}</span>
+            </button>
           ))}
-        </ul>
+        </div>
       )}
-    </aside>
+    </div>
   )
 }
 
@@ -517,23 +557,27 @@ function SalesHistory() {
 
   return (
     <div>
-      <PageHeader title="Ventas" subtitle="Historial de ventas de la tienda. Las ventas pagadas son inmutables: solo pueden anularse (RN-10)." />
+      <PageHeader
+        icon="receipt"
+        title="Ventas"
+        subtitle="Historial de ventas de la tienda. Las ventas pagadas son inmutables: solo pueden anularse (RN-10)."
+      />
       <Notice tone="success" onClose={() => setNotice('')}>{notice}</Notice>
       <Notice tone="error">{error}</Notice>
       <Tabs
         value={tab}
         onChange={setTab}
         tabs={[
-          { value: 'pagado', label: 'Pagadas' },
-          { value: 'anulado', label: 'Anuladas' },
-          { value: 'abierto', label: 'Abiertas' },
+          { value: 'pagado', label: 'Pagadas', icon: 'check2-circle' },
+          { value: 'anulado', label: 'Anuladas', icon: 'x-circle' },
+          { value: 'abierto', label: 'Abiertas', icon: 'hourglass' },
           { value: 'all', label: 'Todas' },
         ]}
       />
       {loading && !data ? (
         <Loading />
       ) : orders.length === 0 ? (
-        <Empty>No hay ventas en esta vista.</Empty>
+        <Card><Empty>No hay ventas en esta vista.</Empty></Card>
       ) : (
         <Table>
           <thead>
@@ -542,7 +586,7 @@ function SalesHistory() {
               <th>Fecha</th>
               <th>Cajero</th>
               <th className="num">Turno</th>
-              <th className="num">Ítems</th>
+              <th className="num">Unidades</th>
               <th className="num">Total</th>
               <th>Medio de pago</th>
               <th>Estado</th>
@@ -552,19 +596,17 @@ function SalesHistory() {
           <tbody>
             {orders.map((o) => (
               <tr key={o.id}>
-                <td className="font-semibold">#{o.id}</td>
-                <td className="whitespace-nowrap">{dateTime(o.cerrado_at || o.created_at)}</td>
+                <td className="fw-semibold">#{o.id}</td>
+                <td className="text-nowrap">{dateTime(o.cerrado_at || o.created_at)}</td>
                 <td>{o.usuario?.nombre}</td>
                 <td className="num">{o.turno_id ?? '—'}</td>
                 <td className="num">{(o.items || []).reduce((a, i) => a + i.cantidad, 0)}</td>
-                <td className="num font-semibold">{money(o.pago?.total ?? orderTotal(o))}</td>
-                <td>{o.pago ? PAYMENT_LABELS[o.pago.metodo_pago] : '—'}</td>
+                <td className="num fw-semibold">{money(o.pago?.total ?? orderTotal(o))}</td>
+                <td className="text-nowrap">{o.pago ? <><Icon name={PAYMENT_ICONS[o.pago.metodo_pago]} className="me-1 text-body-secondary" />{PAYMENT_LABELS[o.pago.metodo_pago]}</> : '—'}</td>
                 <td><Badge tone={ORDER_STATES[o.estado]?.tone}>{ORDER_STATES[o.estado]?.label}</Badge></td>
-                <td className="text-right whitespace-nowrap">
-                  <Button variant="ghost" className="!py-1 !px-2 text-xs" onClick={() => setReceiptId(o.id)}>Comprobante</Button>{' '}
-                  {o.estado === 'pagado' && (
-                    <Button variant="danger" className="!py-1 !px-2 text-xs" onClick={() => setVoiding(o)}>Anular</Button>
-                  )}
+                <td className="text-end text-nowrap">
+                  <Button size="sm" variant="ghost" icon="receipt" onClick={() => setReceiptId(o.id)}>Comprobante</Button>{' '}
+                  {o.estado === 'pagado' && <Button size="sm" variant="danger" icon="arrow-counterclockwise" onClick={() => setVoiding(o)}>Anular</Button>}
                 </td>
               </tr>
             ))}
@@ -614,17 +656,19 @@ function VoidModal({ order, onClose, onDone }) {
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Volver</Button>
-          <Button variant="danger" onClick={submit} disabled={busy || !motivo.trim()}>{busy ? 'Anulando…' : 'Anular venta'}</Button>
+          <button type="button" className="btn btn-danger btn-icon" onClick={submit} disabled={busy || !motivo.trim()}>
+            <Icon name="arrow-counterclockwise" /> {busy ? 'Anulando…' : 'Anular venta'}
+          </button>
         </>
       }
     >
       <Notice tone="error">{error}</Notice>
-      <p className="text-sm text-muted mb-4">
+      <p className="small text-body-secondary">
         La venta no se modifica ni se borra: queda en estado <strong>Anulada</strong>, se devuelven las unidades al inventario
         con un movimiento inverso y la operación queda en la bitácora.
       </p>
       <Field label="Motivo de la anulación (obligatorio)">
-        <textarea className="input-field" rows={3} value={motivo} onChange={(e) => setMotivo(e.target.value)} autoFocus />
+        <textarea className="form-control" rows={3} value={motivo} onChange={(e) => setMotivo(e.target.value)} autoFocus />
       </Field>
     </Modal>
   )
@@ -640,7 +684,7 @@ export function ReceiptModal({ orderId, onClose }) {
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Cerrar</Button>
-          <Button onClick={() => window.print()} disabled={!o}>Imprimir</Button>
+          <Button icon="printer" onClick={() => window.print()} disabled={!o}>Imprimir</Button>
         </>
       }
     >
@@ -648,44 +692,44 @@ export function ReceiptModal({ orderId, onClose }) {
       {loading && !o ? (
         <Loading />
       ) : o ? (
-        <div className="receipt rounded-md p-4 font-mono text-sm" style={{ backgroundColor: 'var(--color-bg-elevated)' }}>
-          <div className="text-center mb-3">
-            <div className="font-bold text-base">SUPERMERCADO · {o.sede?.nombre?.toUpperCase()}</div>
-            <div className="text-xs">{o.sede?.direccion}</div>
-            {o.sede?.telefono && <div className="text-xs">Tel. {o.sede.telefono}</div>}
+        <div className="receipt">
+          <div className="text-center mb-2">
+            <div className="fw-bold">SUPERMERCADO · {o.sede?.nombre?.toUpperCase()}</div>
+            <div className="small">{o.sede?.direccion}</div>
+            {o.sede?.telefono && <div className="small">Tel. {o.sede.telefono}</div>}
           </div>
-          <div className="text-xs mb-2">
+          <div className="small">
             <div>Comprobante de venta N.º {o.id}</div>
             <div>Fecha: {dateTime(o.cerrado_at || o.created_at)}</div>
             <div>Cajero: {o.usuario?.nombre}</div>
             <div>Turno: {o.turno_id ?? '—'}</div>
           </div>
-          <div className="border-t border-dashed my-2" style={{ borderColor: 'currentColor' }} />
+          <hr />
           {(o.items || []).map((it) => (
             <div key={it.id} className="mb-1">
               <div>{it.producto?.nombre}</div>
-              <div className="flex justify-between text-xs">
+              <div className="d-flex justify-content-between small">
                 <span>{it.cantidad} × {money(it.precio_unitario)}</span>
                 <span>{money(it.cantidad * it.precio_unitario)}</span>
               </div>
             </div>
           ))}
-          <div className="border-t border-dashed my-2" style={{ borderColor: 'currentColor' }} />
-          <div className="flex justify-between font-bold text-base">
+          <hr />
+          <div className="d-flex justify-content-between fw-bold fs-6">
             <span>TOTAL</span>
             <span>{money(o.pago?.total ?? orderTotal(o))}</span>
           </div>
-          {o.pago && <div className="text-xs">Medio de pago: {PAYMENT_LABELS[o.pago.metodo_pago]}</div>}
-          <div className="text-xs mt-1">Unidades: {number((o.items || []).reduce((a, i) => a + i.cantidad, 0))}</div>
+          {o.pago && <div className="small">Medio de pago: {PAYMENT_LABELS[o.pago.metodo_pago]}</div>}
+          <div className="small">Unidades: {number((o.items || []).reduce((a, i) => a + i.cantidad, 0))}</div>
           {o.estado === 'anulado' && (
-            <div className="mt-3 text-center font-bold" style={{ color: 'var(--color-error)' }}>
+            <div className="mt-3 text-center fw-bold text-danger">
               *** VENTA ANULADA ***
-              <div className="text-xs font-normal">{dateTime(o.anulado_at)} · {o.anulado_por?.nombre}</div>
-              <div className="text-xs font-normal">Motivo: {o.motivo_anulacion}</div>
+              <div className="small fw-normal">{dateTime(o.anulado_at)} · {o.anulado_por?.nombre}</div>
+              <div className="small fw-normal">Motivo: {o.motivo_anulacion}</div>
             </div>
           )}
-          {o.estado === 'abierto' && <div className="mt-3 text-center font-bold">*** VENTA ABIERTA — SIN COBRAR ***</div>}
-          <div className="text-center text-xs mt-3">¡Gracias por su compra!</div>
+          {o.estado === 'abierto' && <div className="mt-3 text-center fw-bold">*** VENTA ABIERTA — SIN COBRAR ***</div>}
+          <div className="text-center small mt-3">¡Gracias por su compra!</div>
         </div>
       ) : null}
     </Modal>

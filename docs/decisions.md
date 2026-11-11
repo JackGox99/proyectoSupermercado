@@ -194,6 +194,8 @@ func Register(r *gin.Engine, ctrl Controllers, authMiddleware gin.HandlerFunc)
 
 ## ADR-008 — Framework y sistema de diseño del Frontend
 
+> **Estado:** la parte de estilos (Tailwind CSS) fue reemplazada por Bootstrap 5.3 — ver ADR-017. React + Vite se mantienen.
+
 **Estado:** Aceptado
 **Fecha:** 2026-03-21
 **HU relacionada:** HU004
@@ -368,3 +370,30 @@ de tienda programa turnos dentro del horario de operación 06:00–22:00 (RNF-03
 empleado inicia el turno del día y lo cierra al terminar. Cada venta guarda el
 `turno_id` (RN-09) y el cierre calcula el resumen de caja por medio de pago. No se
 puede cerrar un turno con ventas abiertas.
+
+---
+
+## ADR-017 — Bootstrap 5.3 como sistema de diseño del frontend
+
+### Contexto
+Se pidió implementar la interfaz con **Bootstrap** y modernizarla. Mantener Tailwind y
+Bootstrap a la vez genera conflictos de nombres (`.badge`, `.table`, `.container`) y dos
+sistemas de estilos que mantener.
+
+### Decisión
+Migrar todo el frontend a **Bootstrap 5.3** (solo CSS, sin su JavaScript) y **Bootstrap Icons**:
+- Los componentes interactivos (modales, menú de usuario, sidebar colapsable) se controlan
+  con estado de React usando las clases de Bootstrap (`modal`, `dropdown-menu`, etc.).
+- El **color de la tienda** reemplaza `--bs-primary` en tiempo de ejecución (`lib/theme.js`);
+  `.btn-primary` y los focos de formulario se reescriben para usar ese color.
+- **Modo claro y oscuro** con `data-bs-theme` (selector en el encabezado y en el login),
+  recordado en `localStorage`.
+- Paleta de tiendas en tonos medios (#16A34A, #2563EB, #DB2777…) legibles en ambos modos;
+  la migración convierte los colores de la paleta anterior.
+
+### Consecuencias
+- **Positivo:** componentes estándar y documentados (cards, tablas, formularios, alerts),
+  accesibles y responsivos; diseño consistente sin CSS propio extenso.
+- **Positivo:** se elimina la configuración de Tailwind/PostCSS.
+- **Negativo:** el CSS empaquetado es mayor (~47 KB gzip) porque se incluye Bootstrap completo;
+  podría reducirse importando solo los módulos SCSS usados.

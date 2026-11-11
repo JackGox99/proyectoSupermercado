@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { api } from '../api'
 import { useAuth } from '../context/AuthContext'
 import { date, dateTime, isAdminRole, isoDate, money, ROLE_LABELS, SHIFT_STATES, todayISO } from '../lib/format'
-import { Badge, Button, Card, Empty, Field, Loading, Modal, Notice, PageHeader, Table, useApi } from '../components/ui'
+import { Badge, Button, Card, Empty, Field, Icon, Loading, Modal, Notice, PageHeader, Table, useApi } from '../components/ui'
 
 /**
  * Turnos del personal (RF-11 / CU-07 / RN-09).
@@ -15,9 +15,9 @@ export default function Shifts() {
 }
 
 function ShiftSummary({ s }) {
-  if (s.estado !== 'cerrado') return <span className="text-muted">—</span>
+  if (s.estado !== 'cerrado') return <span className="text-body-secondary">—</span>
   return (
-    <span className="whitespace-nowrap">
+    <span className="text-nowrap small">
       {s.num_ventas} venta(s) · <strong>{money(s.total_ventas)}</strong>
     </span>
   )
@@ -72,45 +72,55 @@ function ManageShifts() {
   const rows = shifts.data || []
   return (
     <div>
-      <PageHeader title="Turnos del personal" subtitle={`Asigna turnos dentro del horario de operación (06:00–22:00). Tienda ${store?.nombre}.`} />
+      <PageHeader icon="calendar-week" title="Turnos del personal" subtitle={`Asigna turnos dentro del horario de operación (06:00–22:00). Tienda ${store?.nombre}.`} />
       <Notice tone="success" onClose={() => setNotice('')}>{notice}</Notice>
       <Notice tone="error" onClose={() => setError('')}>{error || shifts.error}</Notice>
 
-      <Card title="Asignar turno" className="mb-6">
-        <form onSubmit={assign} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_auto] gap-3 items-end">
-          <Field label="Empleado">
-            <select className="input-field" value={form.usuario_id} onChange={set('usuario_id')} required>
-              <option value="">Selecciona…</option>
-              {staff.map((u) => <option key={u.id} value={u.id}>{u.nombre} · {ROLE_LABELS[u.rol]}</option>)}
-            </select>
-          </Field>
-          <Field label="Fecha">
-            <input className="input-field" type="date" min={todayISO()} value={form.fecha} onChange={set('fecha')} required />
-          </Field>
-          <Field label="Inicio">
-            <input className="input-field" type="time" min="06:00" max="22:00" value={form.hora_inicio} onChange={set('hora_inicio')} required />
-          </Field>
-          <Field label="Fin">
-            <input className="input-field" type="time" min="06:00" max="22:00" value={form.hora_fin} onChange={set('hora_fin')} required />
-          </Field>
-          <Button type="submit" disabled={busy || !form.usuario_id}>Asignar</Button>
+      <Card title="Asignar turno" className="mb-4">
+        <form onSubmit={assign} className="row g-3 align-items-end">
+          <div className="col-lg-4">
+            <Field label="Empleado">
+              <select className="form-select" value={form.usuario_id} onChange={set('usuario_id')} required>
+                <option value="">Selecciona…</option>
+                {staff.map((u) => <option key={u.id} value={u.id}>{u.nombre} · {ROLE_LABELS[u.rol]}</option>)}
+              </select>
+            </Field>
+          </div>
+          <div className="col-sm-4 col-lg-2">
+            <Field label="Fecha">
+              <input className="form-control" type="date" min={todayISO()} value={form.fecha} onChange={set('fecha')} required />
+            </Field>
+          </div>
+          <div className="col-sm-4 col-lg-2">
+            <Field label="Inicio">
+              <input className="form-control" type="time" min="06:00" max="22:00" value={form.hora_inicio} onChange={set('hora_inicio')} required />
+            </Field>
+          </div>
+          <div className="col-sm-4 col-lg-2">
+            <Field label="Fin">
+              <input className="form-control" type="time" min="06:00" max="22:00" value={form.hora_fin} onChange={set('hora_fin')} required />
+            </Field>
+          </div>
+          <div className="col-lg-2">
+            <Button type="submit" icon="calendar-plus" className="w-100" disabled={busy || !form.usuario_id}>Asignar</Button>
+          </div>
         </form>
       </Card>
 
       <Card
         title="Turnos programados"
         actions={
-          <div className="flex items-center gap-2 text-sm">
-            <input className="input-field !py-1" type="date" value={from} onChange={(e) => setFrom(e.target.value)} aria-label="Desde" />
-            <span className="text-muted">a</span>
-            <input className="input-field !py-1" type="date" value={to} onChange={(e) => setTo(e.target.value)} aria-label="Hasta" />
+          <div className="d-flex align-items-center gap-2">
+            <input className="form-control form-control-sm" type="date" value={from} onChange={(e) => setFrom(e.target.value)} aria-label="Desde" />
+            <span className="small text-body-secondary">a</span>
+            <input className="form-control form-control-sm" type="date" value={to} onChange={(e) => setTo(e.target.value)} aria-label="Hasta" />
           </div>
         }
       >
         {shifts.loading && !shifts.data ? (
           <Loading />
         ) : rows.length === 0 ? (
-          <Empty>No hay turnos en este rango.</Empty>
+          <Empty icon="calendar">No hay turnos en este rango.</Empty>
         ) : (
           <Table>
             <thead>
@@ -127,15 +137,15 @@ function ManageShifts() {
             <tbody>
               {rows.map((s) => (
                 <tr key={s.id}>
-                  <td className="whitespace-nowrap">{date(s.fecha)}{isoDate(s.fecha) === todayISO() && <span className="text-muted"> (hoy)</span>}</td>
-                  <td className="font-medium">{s.usuario?.nombre}</td>
-                  <td className="text-muted">{ROLE_LABELS[s.usuario?.rol]}</td>
+                  <td className="text-nowrap">{date(s.fecha)}{isoDate(s.fecha) === todayISO() && <Badge tone="brand"> hoy</Badge>}</td>
+                  <td className="fw-medium">{s.usuario?.nombre}</td>
+                  <td className="text-body-secondary">{ROLE_LABELS[s.usuario?.rol]}</td>
                   <td className="tabular">{s.hora_inicio}–{s.hora_fin}</td>
                   <td><Badge tone={SHIFT_STATES[s.estado].tone}>{SHIFT_STATES[s.estado].label}</Badge></td>
                   <td><ShiftSummary s={s} /></td>
-                  <td className="text-right whitespace-nowrap">
-                    {s.estado === 'programado' && <Button variant="danger" className="!py-1 !px-2 text-xs" onClick={() => act(s, 'delete')}>Eliminar</Button>}
-                    {s.estado === 'abierto' && <Button variant="ghost" className="!py-1 !px-2 text-xs" onClick={() => act(s, 'close')}>Cerrar turno</Button>}
+                  <td className="text-end text-nowrap">
+                    {s.estado === 'programado' && <Button size="sm" variant="danger" icon="trash3" onClick={() => act(s, 'delete')}>Eliminar</Button>}
+                    {s.estado === 'abierto' && <Button size="sm" variant="ghost" icon="stop-circle" onClick={() => act(s, 'close')}>Cerrar turno</Button>}
                   </td>
                 </tr>
               ))}
@@ -178,12 +188,12 @@ function MyShifts() {
   const rows = shifts.data || []
   return (
     <div>
-      <PageHeader title="Mis turnos" subtitle="Inicia tu turno al llegar y ciérralo al terminar la jornada." />
+      <PageHeader icon="calendar-week" title="Mis turnos" subtitle="Inicia tu turno al llegar y ciérralo al terminar la jornada." />
       <Notice tone="error" onClose={() => setError('')}>{error || shifts.error}</Notice>
       {shifts.loading && !shifts.data ? (
         <Loading />
       ) : rows.length === 0 ? (
-        <Card><Empty>No tienes turnos asignados en estas fechas.</Empty></Card>
+        <Card><Empty icon="calendar-x">No tienes turnos asignados en estas fechas.</Empty></Card>
       ) : (
         <Table>
           <thead>
@@ -198,15 +208,15 @@ function MyShifts() {
           </thead>
           <tbody>
             {rows.map((s) => (
-              <tr key={s.id}>
-                <td className="whitespace-nowrap">{date(s.fecha)}{isoDate(s.fecha) === today && <strong> (hoy)</strong>}</td>
+              <tr key={s.id} className={isoDate(s.fecha) === today ? 'table-active' : ''}>
+                <td className="text-nowrap">{date(s.fecha)}{isoDate(s.fecha) === today && <strong> (hoy)</strong>}</td>
                 <td className="tabular">{s.hora_inicio}–{s.hora_fin}</td>
                 <td><Badge tone={SHIFT_STATES[s.estado].tone}>{SHIFT_STATES[s.estado].label}</Badge></td>
-                <td className="text-muted text-xs">{s.abierto_at ? dateTime(s.abierto_at) : '—'}{s.cerrado_at ? ` → ${dateTime(s.cerrado_at)}` : ''}</td>
+                <td className="text-body-secondary small">{s.abierto_at ? dateTime(s.abierto_at) : '—'}{s.cerrado_at ? ` → ${dateTime(s.cerrado_at)}` : ''}</td>
                 {rol === 'cajero' && <td><ShiftSummary s={s} /></td>}
-                <td className="text-right">
-                  {s.estado === 'programado' && isoDate(s.fecha) === today && <Button className="!py-1 !px-3 text-xs" onClick={() => open(s)}>Iniciar turno</Button>}
-                  {s.estado === 'abierto' && <Button variant="ghost" className="!py-1 !px-3 text-xs" onClick={() => close(s)}>Cerrar turno</Button>}
+                <td className="text-end">
+                  {s.estado === 'programado' && isoDate(s.fecha) === today && <Button size="sm" icon="play-fill" onClick={() => open(s)}>Iniciar turno</Button>}
+                  {s.estado === 'abierto' && <Button size="sm" variant="ghost" icon="stop-circle" onClick={() => close(s)}>Cerrar turno</Button>}
                 </td>
               </tr>
             ))}
@@ -215,18 +225,22 @@ function MyShifts() {
       )}
 
       {closed && (
-        <Modal title="Turno cerrado" subtitle={`${date(closed.fecha)} · ${closed.hora_inicio}–${closed.hora_fin}`} onClose={() => setClosed(null)} footer={<Button onClick={() => setClosed(null)}>Listo</Button>}>
+        <Modal
+          title="Turno cerrado"
+          subtitle={`${date(closed.fecha)} · ${closed.hora_inicio}–${closed.hora_fin}`}
+          onClose={() => setClosed(null)}
+          footer={<Button onClick={() => setClosed(null)}>Listo</Button>}
+        >
           {rol === 'cajero' ? (
-            <dl className="grid grid-cols-2 gap-y-2 text-sm">
-              <dt className="text-muted">Ventas registradas</dt><dd className="text-right font-semibold">{closed.num_ventas}</dd>
-              <dt className="text-muted">Efectivo</dt><dd className="text-right">{money(closed.total_efectivo)}</dd>
-              <dt className="text-muted">Tarjeta débito</dt><dd className="text-right">{money(closed.total_debito)}</dd>
-              <dt className="text-muted">Tarjeta crédito</dt><dd className="text-right">{money(closed.total_credito)}</dd>
-              <dt className="font-semibold pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>Total del turno</dt>
-              <dd className="text-right text-lg font-bold pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>{money(closed.total_ventas)}</dd>
-            </dl>
+            <ul className="list-group list-group-flush">
+              <li className="list-group-item bg-transparent d-flex justify-content-between"><span className="text-body-secondary">Ventas registradas</span><strong>{closed.num_ventas}</strong></li>
+              <li className="list-group-item bg-transparent d-flex justify-content-between"><span className="text-body-secondary"><Icon name="cash-stack" className="me-1" />Efectivo</span><span>{money(closed.total_efectivo)}</span></li>
+              <li className="list-group-item bg-transparent d-flex justify-content-between"><span className="text-body-secondary"><Icon name="credit-card" className="me-1" />Tarjeta débito</span><span>{money(closed.total_debito)}</span></li>
+              <li className="list-group-item bg-transparent d-flex justify-content-between"><span className="text-body-secondary"><Icon name="credit-card-2-front" className="me-1" />Tarjeta crédito</span><span>{money(closed.total_credito)}</span></li>
+              <li className="list-group-item bg-transparent d-flex justify-content-between fs-5"><strong>Total del turno</strong><strong>{money(closed.total_ventas)}</strong></li>
+            </ul>
           ) : (
-            <p className="text-sm">Tu turno quedó cerrado correctamente.</p>
+            <p className="mb-0">Tu turno quedó cerrado correctamente.</p>
           )}
         </Modal>
       )}

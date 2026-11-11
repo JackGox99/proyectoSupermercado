@@ -6,7 +6,7 @@ Sistema de información para la gestión de inventario, ventas y personal de un 
 con varias tiendas. Es un **monolito modular en capas** bajo un esquema **cliente-servidor**
 (sección 10 del documento del proyecto):
 
-- **Presentación:** cliente web en React (Vite + Tailwind).
+- **Presentación:** cliente web en React (Vite + Bootstrap 5.3 + Bootstrap Icons).
 - **Aplicación:** API REST en **Go** con **Gin**: controladores, middleware de seguridad
   (JWT + rol + tienda), bitácora y manejo uniforme de errores.
 - **Lógica de negocio:** servicios por módulo (tiendas, personal, productos, inventario,

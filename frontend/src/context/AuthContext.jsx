@@ -1,25 +1,26 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { AUTH_KEY, STORE_KEY, onUnauthorized, readJSON } from '../api'
+import { applyStoreColor, applyTheme, initialTheme } from '../lib/theme'
 
 const AuthContext = createContext(null)
 
-const DEFAULT_BRAND = '#4ADE80'
-
 /**
- * AuthProvider — sesión del usuario y tienda activa.
+ * AuthProvider — sesión del usuario, tienda activa y tema visual.
  *
  * - `user`: respuesta del login { token, user_id, username, nombre, rol, sede_id, sede }.
  * - `store`: tienda sobre la que se opera.
  *     · Administrador general: la que elige en el selector de tiendas
  *       (null = vista general / consolidado).
  *     · Resto de roles: siempre su tienda asignada.
+ * - `theme`: 'light' | 'dark' (modos de color de Bootstrap 5.3).
  *
- * La tienda activa define el color principal de la interfaz, de modo que cada
- * tienda se ve distinta y el usuario siempre sabe en cuál está trabajando.
+ * El color de la tienda activa se usa como color primario de la interfaz, de
+ * modo que cada tienda se ve distinta y el usuario siempre sabe dónde trabaja.
  */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => readJSON(AUTH_KEY))
   const [store, setStore] = useState(() => readJSON(STORE_KEY))
+  const [theme, setTheme] = useState(() => document.documentElement.getAttribute('data-bs-theme') || initialTheme())
 
   const persistStore = useCallback((s) => {
     if (s) localStorage.setItem(STORE_KEY, JSON.stringify(s))
@@ -45,28 +46,29 @@ export function AuthProvider({ children }) {
     if (user?.rol === 'admin') persistStore(s)
   }, [user?.rol, persistStore])
 
-  // Si la sesión expira (401) se cierra localmente.
+  const toggleTheme = useCallback(() => setTheme((t) => (t === 'dark' ? 'light' : 'dark')), [])
+
   useEffect(() => {
     onUnauthorized(() => logout())
   }, [logout])
 
-  // Color de la tienda activa como color principal de la interfaz.
   useEffect(() => {
-    const color = store?.color || DEFAULT_BRAND
-    document.documentElement.style.setProperty('--color-brand-primary', color)
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color)
-  }, [store?.color])
+    applyTheme(theme)
+    applyStoreColor(store?.color, theme)
+  }, [theme, store?.color])
 
   const value = useMemo(() => ({
     user,
     store,
+    theme,
     rol: user?.rol ?? '',
     isAuthenticated: !!user,
     isGeneralAdmin: user?.rol === 'admin',
     login,
     logout,
     selectStore,
-  }), [user, store, login, logout, selectStore])
+    toggleTheme,
+  }), [user, store, theme, login, logout, selectStore, toggleTheme])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

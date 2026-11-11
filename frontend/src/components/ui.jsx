@@ -2,9 +2,27 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../api'
 
 /**
- * Componentes de interfaz compartidos. Toda la presentación usa las variables
- * CSS de index.css, así el color de la tienda activa se aplica en todas partes.
+ * Componentes de interfaz compartidos, construidos con Bootstrap 5.3.
+ * Los tonos semánticos se usan con estos nombres en todas las pantallas:
+ *   success · error · warning · info · neutral · brand (color de la tienda)
  */
+
+const TONE = {
+  success: 'success',
+  error: 'danger',
+  danger: 'danger',
+  warning: 'warning',
+  info: 'info',
+  neutral: 'secondary',
+  brand: 'primary',
+  accent: 'warning',
+  primary: 'primary',
+}
+
+/** Ícono de Bootstrap Icons: <Icon name="cart3" />. */
+export function Icon({ name, className = '' }) {
+  return <i className={`bi bi-${name} ${className}`} aria-hidden="true" />
+}
 
 /** Carga datos de la API. `path` null = no cargar. */
 export function useApi(path, deps = []) {
@@ -39,169 +57,204 @@ export function useApi(path, deps = []) {
   return { data, setData, error, loading, reload }
 }
 
-export function PageHeader({ title, subtitle, actions }) {
+export function PageHeader({ title, subtitle, actions, icon }) {
   return (
-    <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+    <div className="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3 mb-4">
       <div className="min-w-0">
-        <h1 className="text-2xl font-bold">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
+        <h1 className="h3 fw-bold mb-1 d-flex align-items-center gap-2">
+          {icon && <Icon name={icon} className="text-primary" />}
+          {title}
+        </h1>
+        {subtitle && <p className="text-body-secondary mb-0">{subtitle}</p>}
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      {actions && <div className="d-flex flex-wrap gap-2">{actions}</div>}
     </div>
   )
 }
 
-export function Card({ title, actions, children, className = '' }) {
+export function Card({ title, actions, children, className = '', bodyClassName = '' }) {
   return (
     <section className={`card ${className}`}>
       {(title || actions) && (
-        <div className="flex items-center justify-between gap-3 mb-3">
-          {title && <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">{title}</h2>}
+        <div className="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+          {title && <h2 className="card-title-sm">{title}</h2>}
           {actions}
         </div>
       )}
-      {children}
+      <div className={`card-body ${bodyClassName}`}>{children}</div>
     </section>
   )
 }
 
-export function Stat({ label, value, tone = 'brand', hint }) {
-  const color = {
-    brand: 'var(--color-brand-primary)',
-    success: 'var(--color-success)',
-    warning: 'var(--color-warning)',
-    error: 'var(--color-error)',
-    accent: 'var(--color-accent)',
-    neutral: 'var(--color-text-primary)',
-  }[tone]
+export function Stat({ label, value, tone = 'brand', hint, icon = 'graph-up' }) {
+  const t = TONE[tone] || 'primary'
   return (
-    <div className="card flex flex-col gap-1">
-      <span className="text-xs font-medium uppercase tracking-wider text-muted">{label}</span>
-      <span className="text-2xl font-bold" style={{ color }}>{value}</span>
-      {hint && <span className="text-xs text-muted">{hint}</span>}
+    <div className="card stat-card h-100">
+      <div className="card-body d-flex align-items-start gap-3">
+        <div className={`stat-icon tone-${t}`}><Icon name={icon} /></div>
+        <div className="min-w-0">
+          <div className="stat-label">{label}</div>
+          <div className="stat-value">{value}</div>
+          {hint && <div className="small text-body-secondary">{hint}</div>}
+        </div>
+      </div>
     </div>
   )
 }
 
-export function Badge({ tone = 'neutral', children }) {
-  return <span className={`badge badge-${tone}`}>{children}</span>
+export function Badge({ tone = 'neutral', children, icon }) {
+  const t = TONE[tone] || 'secondary'
+  const cls = t === 'primary'
+    ? 'badge-soft-store'
+    : `bg-${t}-subtle text-${t}-emphasis border border-${t}-subtle`
+  return (
+    <span className={`badge rounded-pill ${cls}`}>
+      {icon && <Icon name={icon} className="me-1" />}
+      {children}
+    </span>
+  )
 }
 
-export function Button({ variant = 'primary', className = '', ...props }) {
-  return <button type="button" className={`btn-${variant} disabled:opacity-50 disabled:cursor-not-allowed ${className}`} {...props} />
+const BTN = {
+  primary: 'btn-primary',
+  ghost: 'btn-outline-secondary',
+  outline: 'btn-outline-primary',
+  danger: 'btn-outline-danger',
+  success: 'btn-success',
+  light: 'btn-light',
 }
+
+export function Button({ variant = 'primary', size, icon, className = '', children, ...props }) {
+  return (
+    <button
+      type="button"
+      className={`btn ${BTN[variant] || BTN.primary} ${size ? `btn-${size}` : ''} ${icon ? 'btn-icon' : ''} ${className}`}
+      {...props}
+    >
+      {icon && <Icon name={icon} />}
+      {children}
+    </button>
+  )
+}
+
+const NOTICE_ICON = { success: 'check-circle-fill', error: 'exclamation-octagon-fill', warning: 'exclamation-triangle-fill', info: 'info-circle-fill' }
 
 export function Notice({ tone = 'info', children, onClose }) {
   if (!children) return null
+  const t = TONE[tone] || 'info'
   return (
-    <div className={`notice notice-${tone}`} role={tone === 'error' ? 'alert' : 'status'}>
-      <div className="flex-1">{children}</div>
-      {onClose && (
-        <button type="button" onClick={onClose} className="text-lg leading-none opacity-70 hover:opacity-100" aria-label="Cerrar">×</button>
-      )}
+    <div className={`alert alert-${t} d-flex align-items-start gap-2 ${onClose ? 'alert-dismissible' : ''}`} role={t === 'danger' ? 'alert' : 'status'}>
+      <Icon name={NOTICE_ICON[tone] || 'info-circle-fill'} className="mt-1" />
+      <div className="flex-grow-1 min-w-0">{children}</div>
+      {onClose && <button type="button" className="btn-close" onClick={onClose} aria-label="Cerrar" />}
     </div>
   )
 }
 
-export function Empty({ children }) {
-  return <div className="py-10 text-center text-sm text-muted">{children}</div>
+export function Empty({ children, icon = 'inbox' }) {
+  return (
+    <div className="text-center text-body-secondary py-5">
+      <Icon name={icon} className="fs-2 d-block mb-2 opacity-50" />
+      <div className="small">{children}</div>
+    </div>
+  )
 }
 
 export function Loading({ label = 'Cargando…' }) {
-  return <div className="py-10 text-center text-sm text-muted">{label}</div>
+  return (
+    <div className="d-flex align-items-center justify-content-center gap-2 text-body-secondary py-5">
+      <span className="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true" />
+      <span className="small">{label}</span>
+    </div>
+  )
 }
 
 export function Field({ label, hint, error, children, className = '' }) {
   return (
-    <label className={`block ${className}`}>
-      <span className="block text-xs font-medium mb-1 text-muted">{label}</span>
+    <label className={`d-block ${className}`}>
+      <span className="form-label d-block">{label}</span>
       {children}
       {error ? (
-        <span className="block text-xs mt-1" style={{ color: 'var(--color-error)' }}>{error}</span>
+        <span className="d-block small text-danger mt-1">{error}</span>
       ) : hint ? (
-        <span className="block text-xs mt-1 text-muted">{hint}</span>
+        <span className="form-text d-block">{hint}</span>
       ) : null}
     </label>
   )
 }
 
+/** Modal de Bootstrap controlado por React (sin el JavaScript de Bootstrap). */
 export function Modal({ title, subtitle, onClose, children, footer, wide = false }) {
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose?.()
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    document.body.classList.add('modal-open')
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.classList.remove('modal-open')
+    }
   }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.65)' }}>
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className={`w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} max-h-[92dvh] flex flex-col rounded-xl shadow-2xl`}
-        style={{ backgroundColor: 'var(--color-bg-surface)', border: '1px solid var(--color-border)' }}
-      >
-        <div className="flex items-start justify-between gap-4 px-5 py-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
-          <div>
-            <h2 className="text-lg font-semibold">{title}</h2>
-            {subtitle && <p className="text-xs text-muted mt-0.5">{subtitle}</p>}
+    <>
+      <div className="modal d-block" tabIndex={-1} role="dialog" aria-modal="true" aria-label={title}>
+        <div className={`modal-dialog modal-dialog-centered modal-dialog-scrollable ${wide ? 'modal-lg' : ''}`}>
+          <div className="modal-content shadow-lg">
+            <div className="modal-header">
+              <div>
+                <h2 className="modal-title h5 fw-semibold mb-0">{title}</h2>
+                {subtitle && <div className="small text-body-secondary">{subtitle}</div>}
+              </div>
+              <button type="button" className="btn-close" onClick={onClose} aria-label="Cerrar" />
+            </div>
+            <div className="modal-body">{children}</div>
+            {footer && <div className="modal-footer">{footer}</div>}
           </div>
-          <button type="button" onClick={onClose} className="text-2xl leading-none text-muted hover:opacity-80" aria-label="Cerrar">×</button>
         </div>
-        <div className="px-5 py-4 overflow-y-auto">{children}</div>
-        {footer && (
-          <div className="px-5 py-3 border-t flex flex-wrap justify-end gap-2" style={{ borderColor: 'var(--color-border)' }}>
-            {footer}
-          </div>
-        )}
       </div>
-    </div>
+      <div className="modal-backdrop show" />
+    </>
   )
 }
 
 export function Tabs({ tabs, value, onChange }) {
   return (
-    <div className="mb-5 flex gap-1 border-b overflow-x-auto" style={{ borderColor: 'var(--color-border)' }} role="tablist">
-      {tabs.map((t) => {
-        const active = t.value === value
-        return (
+    <ul className="nav nav-underline mb-4 flex-nowrap overflow-x-auto" role="tablist">
+      {tabs.map((t) => (
+        <li className="nav-item" key={t.value}>
           <button
-            key={t.value}
             type="button"
             role="tab"
-            aria-selected={active}
+            aria-selected={t.value === value}
+            className={`nav-link text-nowrap ${t.value === value ? 'active text-primary' : 'text-body-secondary'}`}
             onClick={() => onChange(t.value)}
-            className="px-4 py-2 text-sm font-semibold -mb-px whitespace-nowrap transition-colors"
-            style={{
-              color: active ? 'var(--color-brand-primary)' : 'var(--color-text-muted)',
-              borderBottom: `2px solid ${active ? 'var(--color-brand-primary)' : 'transparent'}`,
-            }}
           >
+            {t.icon && <Icon name={t.icon} className="me-1" />}
             {t.label}
-            {t.count != null && <span className="ml-2 text-xs opacity-80">({t.count})</span>}
+            {t.count != null && <span className="badge rounded-pill bg-body-secondary text-body-secondary ms-2">{t.count}</span>}
           </button>
-        )
-      })}
-    </div>
+        </li>
+      ))}
+    </ul>
   )
 }
 
 /** Tabla con desplazamiento horizontal propio (no desplaza la página). */
-export function Table({ children }) {
+export function Table({ children, small = false }) {
   return (
-    <div className="table-wrap">
-      <table className="data-table">{children}</table>
+    <div className="table-responsive app-table">
+      <table className={`table table-hover align-middle ${small ? 'table-sm' : ''}`}>{children}</table>
     </div>
   )
 }
 
-/** Cuadrado de color de una tienda. */
-export function StoreDot({ color, size = 12 }) {
+/** Indicador de color de una tienda. */
+export function StoreDot({ color, size = 10 }) {
   return (
     <span
       aria-hidden="true"
-      className="inline-block rounded-sm flex-shrink-0"
-      style={{ width: size, height: size, backgroundColor: color || 'var(--color-brand-primary)' }}
+      className="d-inline-block rounded-circle flex-shrink-0"
+      style={{ width: size, height: size, backgroundColor: color || 'var(--store-color)' }}
     />
   )
 }

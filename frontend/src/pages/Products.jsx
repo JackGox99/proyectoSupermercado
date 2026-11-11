@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { api } from '../api'
 import { useAuth } from '../context/AuthContext'
 import { expiryState, isoDate, money, stockState, UNIT_LABELS, UNIT_SHORT } from '../lib/format'
-import { Badge, Button, Card, Empty, Field, Loading, Modal, Notice, PageHeader, Table, useApi } from '../components/ui'
+import { Badge, Button, Card, Empty, Field, Icon, Loading, Modal, Notice, PageHeader, Table, useApi } from '../components/ui'
 
 /**
  * Productos y precios de la tienda (RF-05 / CU-05).
@@ -13,17 +13,21 @@ export default function Products() {
   const { store } = useAuth()
   const products = useApi('/products', [store?.id])
   const categories = useApi('/categories')
-  const [editing, setEditing] = useState(null) // null | {} | product
+  const [editing, setEditing] = useState(null)
   const [pricing, setPricing] = useState(null)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const [q, setQ] = useState('')
+  const [cat, setCat] = useState('')
 
   const list = products.data || []
   const shown = useMemo(() => {
     const t = q.trim().toLowerCase()
-    return t ? list.filter((p) => p.nombre.toLowerCase().includes(t) || p.codigo_barras.includes(t)) : list
-  }, [list, q])
+    return list.filter((p) => {
+      if (cat && String(p.categoria_id) !== cat) return false
+      return !t || p.nombre.toLowerCase().includes(t) || p.codigo_barras.includes(t)
+    })
+  }, [list, q, cat])
 
   async function remove(p) {
     if (!window.confirm(`¿Retirar "${p.nombre}" del catálogo? Se conserva en los reportes históricos.`)) return
@@ -47,19 +51,33 @@ export default function Products() {
   return (
     <div>
       <PageHeader
+        icon="tags"
         title="Productos y precios"
         subtitle={`Catálogo maestro de la tienda ${store?.nombre}.`}
-        actions={<Button onClick={() => setEditing({})}>+ Nuevo producto</Button>}
+        actions={<Button icon="plus-lg" onClick={() => setEditing({})}>Nuevo producto</Button>}
       />
       <Notice tone="success" onClose={() => setNotice('')}>{notice}</Notice>
       <Notice tone="error" onClose={() => setError('')}>{error || products.error}</Notice>
 
       <Card>
-        <input className="input-field sm:max-w-sm mb-3" placeholder="Buscar por nombre o código de barras…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <div className="row g-2 mb-3">
+          <div className="col-md-6 col-lg-5">
+            <div className="input-group">
+              <span className="input-group-text bg-transparent"><Icon name="search" /></span>
+              <input className="form-control" placeholder="Buscar por nombre o código de barras…" value={q} onChange={(e) => setQ(e.target.value)} />
+            </div>
+          </div>
+          <div className="col-md-4 col-lg-3">
+            <select className="form-select" value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Categoría">
+              <option value="">Todas las categorías</option>
+              {(categories.data || []).map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </select>
+          </div>
+        </div>
         {products.loading && !products.data ? (
           <Loading />
         ) : shown.length === 0 ? (
-          <Empty>No hay productos. Crea el primero con “Nuevo producto”.</Empty>
+          <Empty icon="tags">No hay productos. Crea el primero con “Nuevo producto”.</Empty>
         ) : (
           <Table>
             <thead>
@@ -70,7 +88,8 @@ export default function Products() {
                 <th>Unidad</th>
                 <th className="num">Costo</th>
                 <th className="num">Precio</th>
-                <th className="num">Stock / mín.</th>
+                <th className="num">Margen</th>
+                <th>Stock / mín.</th>
                 <th>Vencimiento</th>
                 <th />
               </tr>
@@ -79,20 +98,24 @@ export default function Products() {
               {shown.map((p) => {
                 const st = stockState(p.stock_actual, p.stock_minimo)
                 const ex = expiryState(p.fecha_vencimiento)
+                const margin = p.precio > 0 ? Math.round(((p.precio - p.costo_compra) / p.precio) * 100) : 0
                 return (
                   <tr key={p.id}>
-                    <td className="tabular text-muted">{p.codigo_barras}</td>
-                    <td className="font-medium">{p.nombre}</td>
-                    <td className="text-muted">{p.categoria?.nombre}</td>
+                    <td className="tabular text-body-secondary small">{p.codigo_barras}</td>
+                    <td className="fw-medium">{p.nombre}</td>
+                    <td className="text-body-secondary">{p.categoria?.nombre}</td>
                     <td>{UNIT_SHORT[p.unidad_medida]}</td>
-                    <td className="num text-muted">{money(p.costo_compra)}</td>
-                    <td className="num font-semibold">{money(p.precio)}</td>
-                    <td className="num"><Badge tone={st.tone}>{p.stock_actual} / {p.stock_minimo}</Badge></td>
+                    <td className="num text-body-secondary">{money(p.costo_compra)}</td>
+                    <td className="num fw-semibold">{money(p.precio)}</td>
+                    <td className="num text-body-secondary">{margin}%</td>
+                    <td><Badge tone={st.tone}>{p.stock_actual} / {p.stock_minimo}</Badge></td>
                     <td><Badge tone={ex.tone}>{ex.label}</Badge></td>
-                    <td className="text-right whitespace-nowrap">
-                      <Button variant="ghost" className="!py-1 !px-2 text-xs" onClick={() => setEditing(p)}>Editar</Button>{' '}
-                      <Button variant="ghost" className="!py-1 !px-2 text-xs" onClick={() => setPricing(p)}>Precio</Button>{' '}
-                      <Button variant="danger" className="!py-1 !px-2 text-xs" onClick={() => remove(p)}>Retirar</Button>
+                    <td className="text-end text-nowrap">
+                      <div className="btn-group btn-group-sm">
+                        <button type="button" className="btn btn-outline-secondary" onClick={() => setEditing(p)} title="Editar"><Icon name="pencil" /></button>
+                        <button type="button" className="btn btn-outline-secondary" onClick={() => setPricing(p)} title="Cambiar precio"><Icon name="currency-dollar" /></button>
+                        <button type="button" className="btn btn-outline-danger" onClick={() => remove(p)} title="Retirar del catálogo"><Icon name="trash3" /></button>
+                      </div>
                     </td>
                   </tr>
                 )
@@ -170,59 +193,89 @@ function ProductModal({ product, categories, onClose, onSaved, onEditExisting })
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" form="product-form" disabled={saving || !!priceError || !!costError}>{saving ? 'Guardando…' : 'Guardar'}</Button>
+          <Button type="submit" form="product-form" icon="check-lg" disabled={saving || !!priceError || !!costError}>{saving ? 'Guardando…' : 'Guardar'}</Button>
         </>
       }
     >
-      <form id="product-form" onSubmit={save} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <form id="product-form" onSubmit={save} className="row g-3">
         {error && (
-          <div className="sm:col-span-2">
+          <div className="col-12">
             <Notice tone="error">
               {error}
               {existingId && existingId !== product.id && (
                 <div className="mt-2">
-                  <Button variant="ghost" className="!py-1 text-xs" onClick={() => onEditExisting(existingId)}>Editar el producto existente</Button>
+                  <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => onEditExisting(existingId)}>
+                    <Icon name="pencil" className="me-1" /> Editar el producto existente
+                  </button>
                 </div>
               )}
             </Notice>
           </div>
         )}
-        <Field label="Código de barras" hint="Único dentro de la tienda (RN-08).">
-          <input className="input-field tabular" value={form.barcode} onChange={set('barcode')} required maxLength={50} autoFocus={isNew} />
-        </Field>
-        <Field label="Nombre">
-          <input className="input-field" value={form.name} onChange={set('name')} required maxLength={150} />
-        </Field>
-        <Field label="Categoría">
-          <select className="input-field" value={form.category_id} onChange={set('category_id')} required>
-            <option value="">Selecciona…</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
-        </Field>
-        <Field label="Unidad de medida">
-          <select className="input-field" value={form.unit} onChange={set('unit')}>
-            {Object.entries(UNIT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
-        </Field>
-        <Field label="Costo de compra (COP)" error={costError}>
-          <input className="input-field" type="number" min="1" step="1" value={form.purchase_cost} onChange={set('purchase_cost')} required />
-        </Field>
-        <Field label="Precio de venta (COP)" error={priceError}>
-          <input className="input-field" type="number" min="1" step="1" value={form.sale_price} onChange={set('sale_price')} required />
-        </Field>
-        <Field label="Fecha de vencimiento" hint="Vacío si el producto no vence. Vencido no se puede vender (RN-03).">
-          <input className="input-field" type="date" value={form.expiry_date} onChange={set('expiry_date')} />
-        </Field>
-        <Field label="Stock mínimo" hint="Al llegar a este nivel se genera una alerta (RN-11).">
-          <input className="input-field" type="number" min="0" step="1" value={form.min_stock} onChange={set('min_stock')} />
-        </Field>
-        <Field label="Descripción" className="sm:col-span-2">
-          <textarea className="input-field" rows={2} value={form.description} onChange={set('description')} />
-        </Field>
+        <div className="col-md-6">
+          <Field label="Código de barras" hint="Único dentro de la tienda (RN-08).">
+            <div className="input-group">
+              <span className="input-group-text"><Icon name="upc" /></span>
+              <input className="form-control tabular" value={form.barcode} onChange={set('barcode')} required maxLength={50} autoFocus={isNew} />
+            </div>
+          </Field>
+        </div>
+        <div className="col-md-6">
+          <Field label="Nombre">
+            <input className="form-control" value={form.name} onChange={set('name')} required maxLength={150} />
+          </Field>
+        </div>
+        <div className="col-md-6">
+          <Field label="Categoría">
+            <select className="form-select" value={form.category_id} onChange={set('category_id')} required>
+              <option value="">Selecciona…</option>
+              {categories.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </select>
+          </Field>
+        </div>
+        <div className="col-md-6">
+          <Field label="Unidad de medida">
+            <select className="form-select" value={form.unit} onChange={set('unit')}>
+              {Object.entries(UNIT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </Field>
+        </div>
+        <div className="col-md-6">
+          <Field label="Costo de compra" error={costError}>
+            <div className="input-group">
+              <span className="input-group-text">$</span>
+              <input className="form-control" type="number" min="1" step="1" value={form.purchase_cost} onChange={set('purchase_cost')} required />
+            </div>
+          </Field>
+        </div>
+        <div className="col-md-6">
+          <Field label="Precio de venta" error={priceError}>
+            <div className="input-group">
+              <span className="input-group-text">$</span>
+              <input className="form-control" type="number" min="1" step="1" value={form.sale_price} onChange={set('sale_price')} required />
+            </div>
+          </Field>
+        </div>
+        <div className="col-md-6">
+          <Field label="Fecha de vencimiento" hint="Vacío si el producto no vence. Vencido no se puede vender (RN-03).">
+            <input className="form-control" type="date" value={form.expiry_date} onChange={set('expiry_date')} />
+          </Field>
+        </div>
+        <div className="col-md-6">
+          <Field label="Stock mínimo" hint="Al llegar a este nivel se genera una alerta (RN-11).">
+            <input className="form-control" type="number" min="0" step="1" value={form.min_stock} onChange={set('min_stock')} />
+          </Field>
+        </div>
+        <div className="col-12">
+          <Field label="Descripción">
+            <textarea className="form-control" rows={2} value={form.description} onChange={set('description')} />
+          </Field>
+        </div>
         {!isNew && (
-          <p className="sm:col-span-2 text-xs text-muted">
+          <div className="col-12 small text-body-secondary">
+            <Icon name="info-circle" className="me-1" />
             Stock actual: {product.stock_actual} {UNIT_SHORT[product.unidad_medida]}. Las existencias solo las modifica el auxiliar de bodega (RN-05).
-          </p>
+          </div>
         )}
       </form>
     </Modal>
@@ -256,13 +309,16 @@ function PriceModal({ product, onClose, onSaved }) {
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button onClick={save} disabled={busy || !(n > 0)}>Guardar precio</Button>
+          <Button icon="check-lg" onClick={save} disabled={busy || !(n > 0)}>Guardar precio</Button>
         </>
       }
     >
       <Notice tone="error">{error}</Notice>
-      <Field label="Nuevo precio de venta (COP)" error={price !== '' && !(n > 0) ? 'El precio debe ser mayor que cero (RN-07).' : ''}>
-        <input className="input-field" type="number" min="1" step="1" value={price} onChange={(e) => setPrice(e.target.value)} autoFocus />
+      <Field label="Nuevo precio de venta" error={price !== '' && !(n > 0) ? 'El precio debe ser mayor que cero (RN-07).' : ''}>
+        <div className="input-group input-group-lg">
+          <span className="input-group-text">$</span>
+          <input className="form-control" type="number" min="1" step="1" value={price} onChange={(e) => setPrice(e.target.value)} autoFocus />
+        </div>
       </Field>
     </Modal>
   )

@@ -19,7 +19,7 @@ Monolito modular en capas, esquema cliente-servidor (ver [docs/architecture.md](
 
 | Capa | Tecnología |
 |---|---|
-| Presentación | React 18 + Vite + Tailwind (servido por nginx) |
+| Presentación | React 18 + Vite + Bootstrap 5.3 + Bootstrap Icons (servido por nginx) |
 | Aplicación | API REST en Go + Gin · JWT · middleware de rol, tienda y bitácora |
 | Lógica de negocio | Servicios por módulo: tiendas, personal, productos, inventario, ventas, turnos, alertas, reportes, auditoría |
 | Acceso a datos | GORM + transacciones ACID sobre MySQL 8 |

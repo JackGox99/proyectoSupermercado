@@ -111,16 +111,24 @@ func seedSedes(db *gorm.DB) {
 	var count int64
 	db.Model(&models.Venue{}).Count(&count)
 	if count > 0 {
-		// Bases creadas antes de existir el color de tienda: asignar colores distintos.
-		db.Model(&models.Venue{}).Where("nombre = ?", "Restrepo").Where("color = ?", "#4ADE80").Update("color", "#60A5FA")
-		db.Model(&models.Venue{}).Where("nombre = ?", "Zona T").Where("color = ?", "#4ADE80").Update("color", "#F472B6")
+		// Bases creadas con la paleta anterior (tonos claros): pasar a los
+		// tonos medios actuales, legibles sobre fondo claro y oscuro.
+		legacy := map[string]string{
+			"#4ADE80": "#16A34A", "#60A5FA": "#2563EB", "#F472B6": "#DB2777", "#FBBF24": "#D97706",
+			"#A78BFA": "#7C3AED", "#2DD4BF": "#0D9488", "#FB923C": "#EA580C", "#F87171": "#DC2626",
+		}
+		for from, to := range legacy {
+			db.Model(&models.Venue{}).Where("color = ?", from).Update("color", to)
+		}
+		db.Model(&models.Venue{}).Where("nombre = ? AND color = ?", "Restrepo", "#16A34A").Update("color", "#2563EB")
+		db.Model(&models.Venue{}).Where("nombre = ? AND color = ?", "Zona T", "#16A34A").Update("color", "#DB2777")
 		return
 	}
 
 	sedes := []models.Venue{
-		{Nombre: "Galerías", Direccion: "Calle 53 # 27-40, Bogotá", Telefono: "601 345 1020", Color: "#4ADE80", Activa: true},
-		{Nombre: "Restrepo", Direccion: "Carrera 19 # 17-25 Sur, Bogotá", Telefono: "601 345 1030", Color: "#60A5FA", Activa: true},
-		{Nombre: "Zona T", Direccion: "Calle 82 # 12-15, Bogotá", Telefono: "601 345 1040", Color: "#F472B6", Activa: true},
+		{Nombre: "Galerías", Direccion: "Calle 53 # 27-40, Bogotá", Telefono: "601 345 1020", Color: "#16A34A", Activa: true},
+		{Nombre: "Restrepo", Direccion: "Carrera 19 # 17-25 Sur, Bogotá", Telefono: "601 345 1030", Color: "#2563EB", Activa: true},
+		{Nombre: "Zona T", Direccion: "Calle 82 # 12-15, Bogotá", Telefono: "601 345 1040", Color: "#DB2777", Activa: true},
 	}
 
 	if err := db.Create(&sedes).Error; err != nil {

@@ -12,7 +12,7 @@ type Venue struct {
 	Nombre    string    `gorm:"size:100;uniqueIndex;not null"  json:"nombre"`
 	Direccion string    `gorm:"size:255;not null"             json:"direccion"`
 	Telefono  string    `gorm:"size:30"                       json:"telefono"`
-	Color     string    `gorm:"size:7;not null;default:'#4ADE80'" json:"color"`
+	Color     string    `gorm:"size:7;not null;default:'#16A34A'" json:"color"`
 	Activa    bool      `gorm:"not null;default:1"            json:"activa"`
 	CreatedAt time.Time `gorm:"autoCreateTime"                json:"created_at"`
 }

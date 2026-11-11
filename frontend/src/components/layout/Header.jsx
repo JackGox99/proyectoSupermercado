@@ -1,23 +1,28 @@
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { ROLE_LABELS } from '../../lib/format'
-import { StoreDot } from '../ui'
+import { Icon, StoreDot } from '../ui'
+
+const initials = (name = '') =>
+  name.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
 
 /**
- * Encabezado fijo: marca, tienda activa y usuario.
- *
- * La tienda activa se muestra siempre con su color para que el usuario sepa
- * en qué tienda está operando. El administrador general puede volver al
- * selector de tiendas desde aquí.
+ * Encabezado: tienda activa (con su color), cambio de tienda para el
+ * administrador general, modo claro/oscuro y menú de usuario.
  */
 export default function Header({ onMenuToggle }) {
-  const { user, store, isGeneralAdmin, logout, selectStore } = useAuth()
+  const { user, store, isGeneralAdmin, logout, selectStore, theme, toggleTheme } = useAuth()
   const navigate = useNavigate()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
 
-  function handleLogout() {
-    logout()
-    navigate('/login', { replace: true })
-  }
+  useEffect(() => {
+    if (!menuOpen) return
+    const close = (e) => !menuRef.current?.contains(e.target) && setMenuOpen(false)
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [menuOpen])
 
   function changeStore() {
     selectStore(null)
@@ -25,60 +30,76 @@ export default function Header({ onMenuToggle }) {
   }
 
   return (
-    <header
-      className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between gap-3 px-4"
-      style={{
-        height: 'var(--header-height)',
-        backgroundColor: 'var(--color-bg-surface)',
-        borderBottom: '1px solid var(--color-border)',
-        boxShadow: 'inset 0 -3px 0 var(--color-brand-primary)',
-      }}
-    >
-      <div className="flex items-center gap-3 min-w-0">
-        <button
-          onClick={onMenuToggle}
-          aria-label="Abrir menú de navegación"
-          className="md:hidden flex flex-col justify-center items-center w-9 h-9 rounded-md hover:bg-[var(--color-bg-elevated)]"
-        >
-          <span className="block w-5 h-0.5 bg-[var(--color-text-primary)] mb-1" />
-          <span className="block w-5 h-0.5 bg-[var(--color-text-primary)] mb-1" />
-          <span className="block w-5 h-0.5 bg-[var(--color-text-primary)]" />
-        </button>
+    <header className="app-header">
+      <button type="button" className="btn btn-light btn-sm d-lg-none" onClick={onMenuToggle} aria-label="Abrir menú">
+        <Icon name="list" className="fs-5" />
+      </button>
 
-        <span className="hidden sm:flex items-center gap-2 font-bold tracking-wide">
-          <span aria-hidden="true">🛒</span>
-          <span>Supermercado</span>
-        </span>
-
-        <span className="hidden sm:block h-6 w-px" style={{ backgroundColor: 'var(--color-border)' }} />
-
-        <div className="flex items-center gap-2 min-w-0">
-          {store ? (
-            <>
-              <StoreDot color={store.color} size={14} />
-              <span className="font-semibold truncate" style={{ color: 'var(--color-brand-primary)' }}>
-                Tienda {store.nombre}
-              </span>
-            </>
-          ) : (
-            <span className="font-semibold truncate text-muted">Administración general</span>
-          )}
-          {isGeneralAdmin && store && (
-            <button onClick={changeStore} className="btn-ghost !px-2 !py-1 text-xs ml-1">
-              Cambiar tienda
-            </button>
-          )}
-        </div>
+      <div className="d-flex align-items-center gap-2 min-w-0">
+        {store ? (
+          <span className="store-chip text-truncate">
+            <StoreDot color={store.color} />
+            <span className="text-truncate">Tienda {store.nombre}</span>
+          </span>
+        ) : (
+          <span className="store-chip">
+            <Icon name="globe2" />
+            <span className="d-none d-sm-inline">Administración general</span>
+          </span>
+        )}
+        {isGeneralAdmin && store && (
+          <button type="button" className="btn btn-sm btn-outline-secondary btn-icon" onClick={changeStore}>
+            <Icon name="arrow-left-right" />
+            <span className="d-none d-md-inline">Cambiar tienda</span>
+          </button>
+        )}
       </div>
 
-      <div className="flex items-center gap-3 flex-shrink-0">
-        <div className="hidden md:flex flex-col items-end leading-tight">
-          <span className="text-sm font-medium">{user?.nombre}</span>
-          <span className="text-xs text-muted">{ROLE_LABELS[user?.rol] ?? user?.rol}</span>
-        </div>
-        <button onClick={handleLogout} className="btn-ghost text-sm !px-3">
-          Salir
+      <div className="ms-auto d-flex align-items-center gap-2">
+        <button
+          type="button"
+          className="btn btn-sm btn-outline-secondary"
+          onClick={toggleTheme}
+          aria-label={theme === 'dark' ? 'Usar modo claro' : 'Usar modo oscuro'}
+          title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+        >
+          <Icon name={theme === 'dark' ? 'sun' : 'moon-stars'} />
         </button>
+
+        <div className="position-relative" ref={menuRef}>
+          <button
+            type="button"
+            className="btn btn-link text-decoration-none d-flex align-items-center gap-2 p-1 text-body"
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-expanded={menuOpen}
+          >
+            <span className="avatar">{initials(user?.nombre)}</span>
+            <span className="d-none d-md-flex flex-column align-items-start lh-sm text-start">
+              <span className="fw-semibold small">{user?.nombre}</span>
+              <span className="text-body-secondary" style={{ fontSize: '0.75rem' }}>{ROLE_LABELS[user?.rol]}</span>
+            </span>
+            <Icon name="chevron-down" className="small text-body-secondary d-none d-md-inline" />
+          </button>
+          {menuOpen && (
+            <div className="dropdown-menu dropdown-menu-end show shadow position-absolute end-0 mt-1" style={{ minWidth: 220 }}>
+              <div className="px-3 py-2 small">
+                <div className="fw-semibold">{user?.nombre}</div>
+                <div className="text-body-secondary">@{user?.username}</div>
+              </div>
+              <div className="dropdown-divider" />
+              <button type="button" className="dropdown-item d-flex align-items-center gap-2" onClick={() => { setMenuOpen(false); navigate('/perfil') }}>
+                <Icon name="person-circle" /> Mi perfil
+              </button>
+              <button
+                type="button"
+                className="dropdown-item d-flex align-items-center gap-2 text-danger"
+                onClick={() => { logout(); navigate('/login', { replace: true }) }}
+              >
+                <Icon name="box-arrow-right" /> Cerrar sesión
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   )

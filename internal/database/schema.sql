@@ -143,7 +143,7 @@ CREATE TABLE `sedes` (
   `nombre` varchar(100) NOT NULL,
   `direccion` varchar(255) NOT NULL,
   `telefono` varchar(30) DEFAULT NULL,
-  `color` varchar(7) NOT NULL DEFAULT '#4ADE80',
+  `color` varchar(7) NOT NULL DEFAULT '#16A34A',
   `activa` tinyint(1) NOT NULL DEFAULT '1',
   `created_at` datetime(3) DEFAULT NULL,
   PRIMARY KEY (`id`),
