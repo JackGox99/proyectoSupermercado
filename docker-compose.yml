@@ -1,0 +1,59 @@
+services:
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: proyectosupermercado_frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
+
+  mysql:
+    image: mysql:8.0
+    container_name: proyectosupermercado_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: proyectosupermercado
+      MYSQL_USER: supermercadouser
+      MYSQL_PASSWORD: supermercadopass
+    ports:
+      - "3309:3306"        
+    volumes:
+      - supermercado_mysql_data:/var/lib/mysql   # persistencia en disco
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-usupermercadouser", "-psupermercadopass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: proyectosupermercado_api
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy   # espera que MySQL esté listo
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+    environment:
+      PORT: 8080
+      DB_HOST: mysql                 # nombre del servicio, no localhost
+      DB_PORT: 3306
+      DB_USER: supermercadouser
+      DB_PASSWORD: supermercadopass
+      DB_NAME: proyectosupermercado
+      JWT_SECRET: cambia_esto_por_un_secreto_seguro
+      JWT_EXPIRY_HOURS: 24
+    ports:
+      - "8080:8080"
+
+volumes:
+  supermercado_mysql_data:

@@ -1,0 +1,20 @@
+# Binarios y artefactos de Go
+/server
+/api
+*.exe
+*.test
+*.out
+
+# Configuración local
+.env
+.env.*
+!.env.example
+
+# Frontend
+node_modules/
+frontend/dist/
+
+# Editores / sistema
+.vscode/
+.idea/
+.DS_Store

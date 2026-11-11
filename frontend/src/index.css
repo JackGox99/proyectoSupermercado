@@ -1,0 +1,215 @@
+/* ============================================================
+   Supermercado — hoja de estilos global
+   Paleta, componentes base y estilos de impresión (comprobante)
+   ============================================================ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------
+   Paleta. --color-brand-primary se reemplaza en tiempo de
+   ejecución por el color de la tienda activa (AuthContext).
+   ------------------------------------------------------------ */
+:root {
+  --color-brand-primary:  #4ADE80; /* color de la tienda activa */
+  --color-brand-dark:     #07110B; /* texto sobre el color de marca */
+
+  --color-bg-base:        #08110C;
+  --color-bg-surface:     #0F1D15;
+  --color-bg-elevated:    #17291F;
+
+  --color-border:         #24402F;
+
+  --color-text-primary:   #E8F3EC;
+  --color-text-muted:     #8FAE9B;
+
+  --color-accent:         #FB923C; /* naranja etiqueta de precio */
+  --color-success:        #4CAF50;
+  --color-error:          #EF5350;
+  --color-warning:        #FFC107;
+  --color-info:           #60A5FA;
+
+  --sidebar-width:        240px;
+  --header-height:        60px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--color-bg-surface); }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-brand-primary); }
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--color-text-primary);
+}
+
+h1 { font-size: 1.6rem; }
+h2 { font-size: 1.25rem; }
+h3 { font-size: 1.05rem; }
+
+a { color: var(--color-brand-primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.text-muted { color: var(--color-text-muted); }
+.text-brand { color: var(--color-brand-primary); }
+.tabular { font-variant-numeric: tabular-nums; }
+
+@layer components {
+  .btn-primary,
+  .btn-ghost,
+  .btn-danger,
+  .btn-success {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md font-semibold text-sm
+           transition-[filter,border-color,color] duration-150 focus-visible:outline-none whitespace-nowrap;
+  }
+  .btn-primary {
+    background-color: var(--color-brand-primary);
+    color: var(--color-brand-dark);
+  }
+  .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+  .btn-success {
+    background-color: var(--color-success);
+    color: #fff;
+  }
+  .btn-success:hover:not(:disabled) { filter: brightness(1.1); }
+  .btn-danger {
+    background-color: rgba(239, 83, 80, 0.14);
+    color: var(--color-error);
+    border: 1px solid rgba(239, 83, 80, 0.35);
+  }
+  .btn-danger:hover:not(:disabled) { background-color: rgba(239, 83, 80, 0.24); }
+  .btn-ghost {
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    background: transparent;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    border-color: var(--color-brand-primary);
+    color: var(--color-brand-primary);
+  }
+
+  .card {
+    @apply rounded-lg p-4;
+    background-color: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+  }
+
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium
+           transition-colors duration-150 cursor-pointer w-full;
+    color: var(--color-text-muted);
+  }
+  .nav-item:hover {
+    background-color: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+    text-decoration: none;
+  }
+  .nav-item.active {
+    background-color: var(--color-bg-elevated);
+    color: var(--color-brand-primary);
+    box-shadow: inset 3px 0 0 var(--color-brand-primary);
+  }
+
+  .input-field {
+    @apply w-full px-3 py-2 rounded-md text-sm transition-colors duration-150 focus-visible:outline-none;
+    background-color: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+  }
+  .input-field::placeholder { color: var(--color-text-muted); }
+  .input-field:focus { border-color: var(--color-brand-primary); }
+  .input-field:disabled { opacity: 0.6; cursor: not-allowed; }
+  .input-field option { background-color: var(--color-bg-elevated); color: var(--color-text-primary); }
+  .input-field::-webkit-calendar-picker-indicator { filter: invert(0.8); cursor: pointer; }
+
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap;
+  }
+  .badge-success { background-color: rgba(76, 175, 80, 0.15); color: var(--color-success); }
+  .badge-error   { background-color: rgba(239, 83, 80, 0.15); color: var(--color-error); }
+  .badge-warning { background-color: rgba(255, 193, 7, 0.15); color: var(--color-warning); }
+  .badge-info    { background-color: rgba(96, 165, 250, 0.15); color: var(--color-info); }
+  .badge-neutral { background-color: var(--color-bg-elevated); color: var(--color-text-muted); }
+  .badge-brand   { background-color: color-mix(in srgb, var(--color-brand-primary) 18%, transparent); color: var(--color-brand-primary); }
+
+  .notice {
+    @apply flex items-start gap-3 rounded-md px-4 py-3 text-sm mb-4;
+    border: 1px solid;
+  }
+  .notice-error   { background: rgba(239, 83, 80, 0.10); border-color: rgba(239, 83, 80, 0.35); color: #FCA5A5; }
+  .notice-success { background: rgba(76, 175, 80, 0.10); border-color: rgba(76, 175, 80, 0.35); color: #A7F3D0; }
+  .notice-warning { background: rgba(255, 193, 7, 0.10); border-color: rgba(255, 193, 7, 0.35); color: #FDE68A; }
+  .notice-info    { background: rgba(96, 165, 250, 0.10); border-color: rgba(96, 165, 250, 0.35); color: #BFDBFE; }
+
+  .table-wrap {
+    @apply w-full overflow-x-auto rounded-lg;
+    border: 1px solid var(--color-border);
+  }
+  .data-table {
+    @apply w-full text-sm;
+    border-collapse: collapse;
+  }
+  .data-table th {
+    @apply text-left text-xs font-semibold uppercase tracking-wide px-3 py-2 whitespace-nowrap;
+    color: var(--color-text-muted);
+    background-color: var(--color-bg-elevated);
+  }
+  .data-table td {
+    @apply px-3 py-2 align-middle;
+    border-top: 1px solid var(--color-border);
+  }
+  .data-table tbody tr:hover td { background-color: rgba(255, 255, 255, 0.02); }
+  .data-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+}
+
+/* ------------------------------------------------------------
+   Impresión del comprobante de venta (RF-08)
+   ------------------------------------------------------------ */
+.print-only { display: none; }
+
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  body * { visibility: hidden; }
+  .receipt, .receipt * { visibility: visible; color: #000 !important; }
+  .receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    background: #fff !important;
+    border: none !important;
+    padding: 0 !important;
+    font-size: 12px;
+  }
+  .no-print { display: none !important; }
+}
