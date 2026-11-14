@@ -12,11 +12,27 @@ const PAYMENT_ICONS = { efectivo: 'cash-stack', tarjeta_debito: 'credit-card', t
 /**
  * Ventas (CU-01).
  *  - Cajero: punto de venta.
- *  - Administradores: historial de ventas, comprobantes y anulación (RN-10).
+ *  - Administrador de tienda: historial de ventas, comprobantes y anulación (RN-10).
+ *  - Administrador general: ambas cosas (ADR-018).
  */
 export default function Sales() {
   const { rol } = useAuth()
-  return rol === 'cajero' ? <PointOfSale /> : <SalesHistory />
+  const [view, setView] = useState('pos')
+  if (rol === 'cajero') return <PointOfSale />
+  if (rol !== 'admin') return <SalesHistory />
+  return (
+    <div>
+      <Tabs
+        value={view}
+        onChange={setView}
+        tabs={[
+          { value: 'pos', label: 'Punto de venta', icon: 'upc-scan' },
+          { value: 'history', label: 'Historial', icon: 'clock-history' },
+        ]}
+      />
+      {view === 'pos' ? <PointOfSale /> : <SalesHistory />}
+    </div>
+  )
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -24,19 +40,30 @@ export default function Sales() {
 // ════════════════════════════════════════════════════════════════════════════
 
 function PointOfSale() {
-  const shift = useApi('/shifts/current')
+  const { rol, store } = useAuth()
+  const isAdmin = rol === 'admin'
+  const shift = useApi(isAdmin ? null : '/shifts/current')
   const current = shift.data?.shift
 
-  if (shift.loading && !shift.data) return <Loading />
+  if (!isAdmin && shift.loading && !shift.data) return <Loading />
   return (
     <div>
       <PageHeader
         icon="upc-scan"
         title="Punto de venta"
-        subtitle={current ? `Turno en curso ${current.hora_inicio}–${current.hora_fin}` : 'Registra ventas durante tu turno.'}
+        subtitle={
+          isAdmin
+            ? `Registrando ventas en la tienda ${store?.nombre} como administrador general.`
+            : current ? `Turno en curso ${current.hora_inicio}–${current.hora_fin}` : 'Registra ventas durante tu turno.'
+        }
       />
       <Notice tone="error">{shift.error}</Notice>
-      {current ? <Register /> : <StartShift onStarted={shift.reload} />}
+      {isAdmin && (
+        <Notice tone="info">
+          Como administrador general puedes vender sin turno: las ventas quedan registradas a tu nombre y sin turno asociado.
+        </Notice>
+      )}
+      {isAdmin || current ? <Register /> : <StartShift onStarted={shift.reload} />}
     </div>
   )
 }
@@ -90,7 +117,8 @@ function StartShift({ onStarted }) {
 
 function Register() {
   const { store } = useAuth()
-  const openSales = useApi('/orders?estado=abierto')
+  // mine=1: solo las ventas propias (el administrador ve además las de los cajeros en el historial).
+  const openSales = useApi('/orders?estado=abierto&mine=1', [store?.id])
   const inventory = useApi('/inventory', [store?.id])
   const [activeId, setActiveId] = useState(null)
   const [notice, setNotice] = useState('')
@@ -508,7 +536,8 @@ function ChargeModal({ order, onClose, onPaid, onReceipt }) {
 }
 
 function RecentSales({ onReceipt, refreshKey }) {
-  const { data } = useApi('/orders?estado=pagado', [refreshKey])
+  const { store } = useAuth()
+  const { data } = useApi('/orders?estado=pagado&mine=1', [refreshKey, store?.id])
   const today = todayISO()
   const todays = (data || []).filter((o) => (o.cerrado_at || '').slice(0, 10) === today)
   const total = todays.reduce((a, o) => a + (o.pago?.total || 0), 0)

@@ -10,12 +10,16 @@
 //	Categorías (esc.)  |      ✔        |              |        |
 //	Usuarios/personal  |      ✔        | ✔ (su tienda)|        |
 //	Productos (esc.)   |      ✔        |      ✔       |        |
-//	Entradas/ajustes   |               |              |        |     ✔  (RN-05)
-//	Registrar venta    |               |              |   ✔    |
+//	Entradas/ajustes   |      ✔ (*)    |              |        |     ✔  (RN-05)
+//	Registrar venta    |      ✔ (*)    |              |   ✔    |
 //	Anular venta       |      ✔        |      ✔       |        |
 //	Turnos (asignar)   |      ✔        |      ✔       |        |
 //	Reportes/bitácora  |      ✔        | ✔ (su tienda)|        |
 //	Consultar stock    |      ✔        |      ✔       |   ✔    |     ✔  (CU-04)
+//
+//	(*) Excepción decidida por el equipo (ADR-018): el administrador general
+//	    puede ejecutar las operaciones de todos los roles en la tienda que tenga
+//	    seleccionada. Sus ventas no se asocian a un turno.
 package routes
 
 import (
@@ -57,10 +61,12 @@ func Register(r *gin.Engine, ctrl Controllers, authMiddleware, auditMiddleware g
 	role := middleware.RequireRole
 
 	var (
-		admin       = role(models.RolAdmin)
-		admins      = role(models.RolAdmin, models.RolAdminTienda)
-		cashier     = role(models.RolCajero)
-		warehouse   = role(models.RolAuxiliarBodega)
+		admin  = role(models.RolAdmin)
+		admins = role(models.RolAdmin, models.RolAdminTienda)
+		// El administrador general puede ejecutar también las operaciones de
+		// cajero y de auxiliar de bodega (ADR-018).
+		cashier     = role(models.RolCajero, models.RolAdmin)
+		warehouse   = role(models.RolAuxiliarBodega, models.RolAdmin)
 		salesViewer = role(models.RolAdmin, models.RolAdminTienda, models.RolCajero)
 		stockViewer = role(models.RolAdmin, models.RolAdminTienda, models.RolAuxiliarBodega)
 		shiftWorker = role(models.RolCajero, models.RolAuxiliarBodega)

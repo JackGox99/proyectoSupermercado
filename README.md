@@ -28,7 +28,7 @@ Monolito modular en capas, esquema cliente-servidor (ver [docs/architecture.md](
 
 | Rol | Qué hace en el sistema |
 |---|---|
-| **Administrador general** | Entra a un **selector de tiendas**: crea, configura e inactiva tiendas, designa al administrador de cada una, define las categorías y consulta el consolidado. Puede entrar a cualquier tienda para administrarla. |
+| **Administrador general** | Entra a un **selector de tiendas**: crea, configura e inactiva tiendas, designa al administrador de cada una, define las categorías y consulta el consolidado. Dentro de cualquier tienda puede hacer **todo lo que hacen los demás roles**: vender, registrar entradas y ajustes, gestionar productos, turnos y personal (ADR-018). |
 | **Administrador de tienda** | Administra solo su tienda: personal operativo, productos y precios, turnos, ventas (anulaciones), reportes y bitácora. |
 | **Cajero** | Punto de venta: inicia su turno, registra la venta (lector de código de barras), cobra en efectivo, débito o crédito, entrega el comprobante y cierra su turno. |
 | **Auxiliar de bodega** | Único rol que registra entradas de mercancía y ajustes por avería, devolución o vencimiento. Atiende las alertas. |
@@ -41,7 +41,7 @@ Monolito modular en capas, esquema cliente-servidor (ver [docs/architecture.md](
 | RN-02 El stock se descuenta al pagar | Transacción de cobro (`FinalizeSale`) |
 | RN-03 No vender vencidos | Al agregar y al pagar; alerta "Vencido — retirar" |
 | RN-04 Solo la tienda asignada | Middleware `StoreScope` (403 + bitácora) |
-| RN-05 Solo bodega modifica inventario | Rutas `/inventory/add` y `/inventory/adjust` |
+| RN-05 Solo bodega modifica inventario | Rutas `/inventory/add` y `/inventory/adjust` (excepción: administrador general, ADR-018) |
 | RN-06 Solo el admin general gestiona tiendas | Rutas `/venues` (403 + bitácora) |
 | RN-07 Precio mayor que cero | Servicio de productos |
 | RN-08 Código de barras único por tienda | Servicio + índice único `(sede_id, codigo_barras)` |

@@ -27,8 +27,9 @@ type SaleResult struct {
 type OrderService interface {
 	List(f repository.OrderFilter) ([]models.Order, error)
 	GetByID(id uint) (*models.Order, error)
-	// Create abre una venta para el cajero; requiere un turno abierto.
-	Create(actor *TokenClaims) (*models.Order, error)
+	// Create abre una venta. El cajero la abre en su tienda y requiere turno
+	// abierto; el administrador general la abre en la tienda activa (storeID).
+	Create(actor *TokenClaims, storeID uint) (*models.Order, error)
 	// Cancel elimina una venta abierta del propio cajero (no afecta inventario).
 	Cancel(actor *TokenClaims, orderID uint) error
 	// AddItem agrega un producto por ID o por código de barras. Si el producto
@@ -66,7 +67,12 @@ func (s *orderService) GetByID(id uint) (*models.Order, error) {
 }
 
 // openShift retorna el turno abierto del cajero en su tienda (RN-09).
+// El administrador general no tiene turnos asignados: vende sin turno
+// (retorna nil, nil) y la venta queda asociada a su usuario (ADR-018).
 func (s *orderService) openShift(actor *TokenClaims) (*models.Shift, error) {
+	if actor.Rol == models.RolAdmin {
+		return nil, nil
+	}
 	if actor.Rol != models.RolCajero || actor.SedeID == nil {
 		return nil, ErrForbiddenRole
 	}
@@ -95,16 +101,20 @@ func (s *orderService) ownOpenOrder(actor *TokenClaims, orderID uint) (*models.O
 	return order, nil
 }
 
-func (s *orderService) Create(actor *TokenClaims) (*models.Order, error) {
+func (s *orderService) Create(actor *TokenClaims, storeID uint) (*models.Order, error) {
 	shift, err := s.openShift(actor)
 	if err != nil {
 		return nil, err
 	}
-	order := &models.Order{
-		SedeID:    *actor.SedeID,
-		UsuarioID: actor.UserID,
-		TurnoID:   &shift.ID,
-		Estado:    models.EstadoAbierto,
+	order := &models.Order{UsuarioID: actor.UserID, Estado: models.EstadoAbierto}
+	if shift != nil {
+		order.SedeID = shift.SedeID
+		order.TurnoID = &shift.ID
+	} else {
+		if storeID == 0 {
+			return nil, ErrStoreRequired
+		}
+		order.SedeID = storeID
 	}
 	if err := s.repo.Create(order); err != nil {
 		return nil, err
@@ -221,7 +231,11 @@ func (s *orderService) Finalize(actor *TokenClaims, orderID uint, metodo models.
 	}
 
 	payment := &models.Payment{UsuarioID: actor.UserID, MetodoPago: metodo}
-	alerts, err := s.repo.FinalizeSale(orderID, payment, shift.ID, time.Now())
+	var turnoID *uint
+	if shift != nil {
+		turnoID = &shift.ID
+	}
+	alerts, err := s.repo.FinalizeSale(orderID, payment, turnoID, time.Now())
 	if err != nil {
 		var stockErr *repository.InsufficientStockError
 		var expErr *repository.ExpiredProductError

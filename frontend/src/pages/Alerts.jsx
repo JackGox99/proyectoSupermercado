@@ -75,7 +75,7 @@ export default function Alerts() {
         subtitle={`Stock mínimo y productos vencidos o que vencen en los próximos ${data?.expiry_window_days ?? 7} días.`}
       />
       <Notice tone="error">{error}</Notice>
-      {rol === 'auxiliar_bodega' && alerts.length > 0 && (
+      {(rol === 'auxiliar_bodega' || rol === 'admin') && alerts.length > 0 && (
         <Notice tone="info">
           Repón existencias desde <Link to="/inventario?accion=entrada" className="alert-link">Entrada de mercancía</Link> y
           retira los vencidos con un <Link to="/inventario?accion=ajuste" className="alert-link">ajuste por vencimiento</Link>.

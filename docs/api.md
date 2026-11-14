@@ -87,8 +87,8 @@ Unidades (`unit`): `unidad`, `kg`, `g`, `l`, `ml`, `paquete`.
 | GET | `/inventory` | Todos | Existencias de la tienda. |
 | GET | `/inventory/binary-search?name=&algo=iterative\|recursive` | Todos | Demo de MergeSort + búsqueda binaria. |
 | GET | `/inventory/movements?tipo=&product=` | AG, AT, AB | Historial de movimientos (trazabilidad). |
-| POST | `/inventory/add` | **AB** | Entrada de mercancía `{ product_id, quantity, reason }`. |
-| POST | `/inventory/adjust` | **AB** | Ajuste `{ product_id, quantity, type, reason }`. `type`: `averia`, `vencimiento` (retiran unidades), `devolucion`, `correccion` (cantidad con signo). El stock nunca queda negativo. |
+| POST | `/inventory/add` | **AB**, AG | Entrada de mercancía `{ product_id, quantity, reason }`. |
+| POST | `/inventory/adjust` | **AB**, AG | Ajuste `{ product_id, quantity, type, reason }`. `type`: `averia`, `vencimiento` (retiran unidades), `devolucion`, `correccion` (cantidad con signo). El stock nunca queda negativo. |
 
 Tipos de movimiento: `entrada`, `descuento_venta`, `anulacion_venta`, `ajuste_averia`,
 `ajuste_devolucion`, `ajuste_vencimiento`, `ajuste_manual`.
@@ -103,13 +103,13 @@ Tipos de movimiento: `entrada`, `descuento_venta`, `anulacion_venta`, `ajuste_av
 
 | Método | Ruta | Roles | Descripción |
 |---|---|---|---|
-| GET | `/orders?estado=abierto\|pagado\|anulado` | AG, AT, CA | CA ve solo sus ventas. |
+| GET | `/orders?estado=abierto\|pagado\|anulado&mine=1` | AG, AT, CA | CA ve solo sus ventas; `mine=1` filtra las del usuario autenticado. |
 | GET | `/orders/:id` | AG, AT, CA | Detalle completo; sirve como comprobante (RF-08). |
-| POST | `/orders` | CA | Abre una venta. Requiere turno abierto (RN-09). |
-| DELETE | `/orders/:id` | CA | Cancela una venta abierta propia (no afecta inventario). |
-| POST | `/orders/:id/items` | CA | `{ barcode \| product_id, cantidad }`. Valida stock (RN-01) y vencimiento (RN-03); **no** descuenta stock. |
-| DELETE | `/orders/:id/items/:itemId` | CA | |
-| POST | `/orders/:id/finalize` (alias `/pay`) | CA | `{ metodo_pago, monto_entregado? }`. Cobra y descuenta stock en una transacción (RN-02, RNF-07). Responde `total`, `alerts` (RN-11) y `cambio` (algoritmo voraz) si es efectivo. |
+| POST | `/orders` | CA, AG | Abre una venta. El cajero requiere turno abierto (RN-09); AG vende en la tienda activa sin turno (ADR-018). |
+| DELETE | `/orders/:id` | CA, AG | Cancela una venta abierta propia (no afecta inventario). |
+| POST | `/orders/:id/items` | CA, AG | `{ barcode \| product_id, cantidad }`. Valida stock (RN-01) y vencimiento (RN-03); **no** descuenta stock. |
+| DELETE | `/orders/:id/items/:itemId` | CA, AG | |
+| POST | `/orders/:id/finalize` (alias `/pay`) | CA, AG | `{ metodo_pago, monto_entregado? }`. Cobra y descuenta stock en una transacción (RN-02, RNF-07). Responde `total`, `alerts` (RN-11) y `cambio` (algoritmo voraz) si es efectivo. |
 | POST | `/orders/:id/annul` | AG, AT | `{ motivo }` obligatorio. Anula una venta pagada con movimientos inversos (RN-10). |
 
 Medios de pago: `efectivo`, `tarjeta_debito`, `tarjeta_credito`.

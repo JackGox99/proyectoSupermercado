@@ -397,3 +397,30 @@ Migrar todo el frontend a **Bootstrap 5.3** (solo CSS, sin su JavaScript) y **Bo
 - **Positivo:** se elimina la configuración de Tailwind/PostCSS.
 - **Negativo:** el CSS empaquetado es mayor (~47 KB gzip) porque se incluye Bootstrap completo;
   podría reducirse importando solo los módulos SCSS usados.
+
+---
+
+## ADR-018 — El administrador general puede ejecutar las operaciones de todos los roles
+
+### Contexto
+El equipo decidió que el administrador general debe poder hacer todo lo que hacen los
+demás roles, por ejemplo para cubrir una caja o recibir mercancía cuando falta personal.
+El documento asigna el registro de ventas al cajero (CU-01) y las modificaciones de
+inventario solo al auxiliar de bodega (RN-05).
+
+### Decisión
+Se habilita al rol `admin` en las rutas de cajero (abrir, editar, cobrar y cancelar ventas)
+y de auxiliar de bodega (entradas y ajustes), siempre **sobre la tienda que tenga
+seleccionada** en el selector de tiendas. Las funciones de administrador de tienda ya
+estaban disponibles para él.
+
+- El administrador no tiene turnos asignados: sus ventas se registran **sin turno**
+  (`turno_id` nulo) y asociadas a su usuario, por lo que no entran en el cierre de caja
+  de ningún cajero.
+- Cada venta, entrada y ajuste que hace queda en la bitácora con su usuario y rol (RF-13).
+- El resto de roles no cambia: RN-05 se sigue aplicando al administrador de tienda y al cajero.
+
+### Consecuencias
+- **Excepción documentada** a RN-05 y al actor principal de CU-01, limitada al administrador general.
+- El punto de venta del administrador muestra solo sus propias ventas abiertas (`?mine=1`);
+  las de los cajeros se consultan en el historial.

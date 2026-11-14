@@ -27,14 +27,15 @@ func NewOrderController(service services.OrderService) *OrderController {
 //   - Cajero: solo sus propias ventas.
 //   - Administradores: todas las ventas de la tienda (o de todas, admin general).
 //
-// Filtro opcional ?estado=abierto|pagado|anulado.
+// Filtros opcionales: ?estado=abierto|pagado|anulado y ?mine=1 (solo las
+// ventas del usuario autenticado; lo usa el punto de venta del administrador).
 func (oc *OrderController) List(c *gin.Context) {
 	claims, ok := extractClaims(c)
 	if !ok {
 		return
 	}
 	f := repository.OrderFilter{VenueID: storeScope(c), Estado: c.Query("estado")}
-	if claims.Rol == models.RolCajero {
+	if claims.Rol == models.RolCajero || c.Query("mine") == "1" {
 		uid := claims.UserID
 		f.UsuarioID = &uid
 	}
@@ -64,13 +65,18 @@ func (oc *OrderController) GetByID(c *gin.Context) {
 	c.JSON(http.StatusOK, order)
 }
 
-// Create abre una venta. Requiere rol cajero con turno abierto (RN-09).
+// Create abre una venta. El cajero requiere turno abierto (RN-09); el
+// administrador general la abre en la tienda activa (ADR-018).
 func (oc *OrderController) Create(c *gin.Context) {
 	claims, ok := extractClaims(c)
 	if !ok {
 		return
 	}
-	order, err := oc.service.Create(claims)
+	var storeID uint
+	if store := storeScope(c); store != nil {
+		storeID = *store
+	}
+	order, err := oc.service.Create(claims, storeID)
 	if err != nil {
 		respondError(c, err)
 		return

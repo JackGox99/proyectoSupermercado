@@ -105,8 +105,9 @@ function QuickActions({ rol }) {
       { label: 'Reportes', to: '/reportes', icon: 'bar-chart-line' },
     ],
     admin: [
-      { label: 'Productos', to: '/productos', icon: 'tags', primary: true },
-      { label: 'Ventas', to: '/ventas', icon: 'receipt' },
+      { label: 'Registrar venta', to: '/ventas', icon: 'upc-scan', primary: true },
+      { label: 'Entrada de mercancía', to: '/inventario?accion=entrada', icon: 'box-arrow-in-down' },
+      { label: 'Productos', to: '/productos', icon: 'tags' },
       { label: 'Reportes', to: '/reportes', icon: 'bar-chart-line' },
     ],
   }[rol] || []

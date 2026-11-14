@@ -71,7 +71,8 @@ type OrderRepository interface {
 	// FinalizeSale registra el pago y descuenta las existencias en una única
 	// transacción ACID (RF-07 / RNF-07). Si cualquier paso falla no queda
 	// ningún cambio parcial. Retorna las alertas de stock mínimo generadas.
-	FinalizeSale(orderID uint, payment *models.Payment, turnoID uint, today time.Time) ([]LowStockAlert, error)
+	// turnoID es nil cuando cobra el administrador general (no tiene turnos).
+	FinalizeSale(orderID uint, payment *models.Payment, turnoID *uint, today time.Time) ([]LowStockAlert, error)
 	// AnnulSale anula una venta pagada generando movimientos inversos de
 	// inventario trazables (RN-10).
 	AnnulSale(orderID, userID uint, motivo string) error
@@ -149,7 +150,7 @@ func (r *orderRepository) CountOpenByShift(turnoID uint) (int64, error) {
 		Count(&n).Error
 }
 
-func (r *orderRepository) FinalizeSale(orderID uint, payment *models.Payment, turnoID uint, today time.Time) ([]LowStockAlert, error) {
+func (r *orderRepository) FinalizeSale(orderID uint, payment *models.Payment, turnoID *uint, today time.Time) ([]LowStockAlert, error) {
 	var alerts []LowStockAlert
 
 	err := r.db.Transaction(func(tx *gorm.DB) error {

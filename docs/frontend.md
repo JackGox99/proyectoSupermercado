@@ -49,8 +49,8 @@ frontend/src/
 |---|---|---|---|---|
 | Tiendas (selector) | ✔ vista general | | | |
 | Panel / consolidado | ✔ | ✔ | ✔ | ✔ |
-| Ventas | historial y anulación | historial y anulación | punto de venta | |
-| Inventario | consulta + movimientos | consulta + movimientos | precios y stock | entradas, ajustes, movimientos |
+| Ventas | punto de venta + historial y anulación | historial y anulación | punto de venta | |
+| Inventario | entradas, ajustes, movimientos | consulta + movimientos | precios y stock | entradas, ajustes, movimientos |
 | Productos | ✔ | ✔ | | |
 | Alertas | ✔ | ✔ | ✔ | ✔ |
 | Turnos | asignar | asignar | mis turnos | mis turnos |

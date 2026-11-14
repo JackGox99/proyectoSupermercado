@@ -12,12 +12,13 @@ const ADJ_ICONS = { averia: 'heartbreak', vencimiento: 'calendar-x', devolucion:
 /**
  * Inventario de la tienda activa.
  *  - Todos los roles consultan existencias y precios (CU-04).
- *  - Solo el auxiliar de bodega registra entradas (CU-02) y ajustes (CU-03) — RN-05.
+ *  - El auxiliar de bodega registra entradas (CU-02) y ajustes (CU-03) — RN-05.
+ *    El administrador general también puede hacerlo (ADR-018).
  *  - Bodega y administradores consultan el historial de movimientos (trazabilidad).
  */
 export default function Inventory() {
   const { rol, store } = useAuth()
-  const isWarehouse = rol === 'auxiliar_bodega'
+  const isWarehouse = rol === 'auxiliar_bodega' || rol === 'admin'
   const canSeeMovements = rol !== 'cajero'
   const [params, setParams] = useSearchParams()
   const [tab, setTab] = useState('stock')
@@ -40,9 +41,11 @@ export default function Inventory() {
         icon="boxes"
         title={rol === 'cajero' ? 'Precios y stock' : 'Inventario'}
         subtitle={
-          isWarehouse
-            ? 'Registra entradas de mercancía y ajustes. Eres el único rol autorizado para modificar existencias (RN-05).'
-            : 'Existencias de la tienda en tiempo real. Las modificaciones las registra el auxiliar de bodega (RN-05).'
+          rol === 'auxiliar_bodega'
+            ? 'Registra entradas de mercancía y ajustes. Eres el único rol operativo autorizado para modificar existencias (RN-05).'
+            : rol === 'admin'
+              ? 'Existencias de la tienda en tiempo real. Como administrador general también puedes registrar entradas y ajustes.'
+              : 'Existencias de la tienda en tiempo real. Las modificaciones las registra el auxiliar de bodega (RN-05).'
         }
         actions={
           isWarehouse && (
