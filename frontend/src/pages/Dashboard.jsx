@@ -140,7 +140,7 @@ function ConsolidatedPanel() {
       />
       <Notice tone="error">{error}</Notice>
 
-      <div className="row g-3 mb-4 row-cols-2 row-cols-lg-4">
+      <div className="row g-3 mb-4 row-cols-2 row-cols-xl-4">
         <div className="col"><Stat icon="receipt" label="Ventas de hoy" value={number(total('ventas_hoy'))} /></div>
         <div className="col"><Stat icon="cash-coin" label="Total vendido hoy" value={money(total('total_hoy'))} tone="success" /></div>
         <div className="col"><Stat icon="bell" label="Alertas de stock" value={number(total('stock_bajo'))} tone="warning" hint={`${total('vencidos')} vencidos · ${total('por_vencer')} por vencer`} /></div>

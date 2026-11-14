@@ -63,7 +63,7 @@ export default function StoreSelector() {
         <Loading />
       ) : (
         <>
-          <div className="row g-3 mb-4 row-cols-2 row-cols-md-3 row-cols-xl-5">
+          <div className="row g-3 mb-4 row-cols-2 row-cols-md-3 row-cols-xxl-5">
             <div className="col"><Stat icon="shop" label="Tiendas activas" value={`${active.length} / ${stores.length}`} tone="neutral" /></div>
             <div className="col"><Stat icon="receipt" label="Ventas de hoy" value={number(sum('ventas_hoy'))} /></div>
             <div className="col"><Stat icon="cash-coin" label="Total vendido hoy" value={money(sum('total_hoy'))} tone="success" /></div>

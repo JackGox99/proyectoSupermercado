@@ -77,7 +77,7 @@ function SalesReport({ range, storeKey }) {
   const maxQty = Math.max(1, ...top.map((t) => t.total_quantity))
   return (
     <>
-      <div className="row g-3 mb-4 row-cols-2 row-cols-lg-5">
+      <div className="row g-3 mb-4 row-cols-2 row-cols-md-3 row-cols-xxl-5">
         <div className="col"><Stat icon="cash-coin" label="Ingresos" value={money(kpis.total_revenue)} tone="success" /></div>
         <div className="col"><Stat icon="receipt" label="Ventas" value={number(kpis.transaction_count)} /></div>
         <div className="col"><Stat icon="basket" label="Ticket promedio" value={money(ticket)} tone="neutral" /></div>
@@ -144,7 +144,7 @@ function InventoryReport({ storeKey }) {
   if (error) return <Notice tone="error">{error}</Notice>
   return (
     <>
-      <div className="row g-3 mb-4 row-cols-2 row-cols-lg-5">
+      <div className="row g-3 mb-4 row-cols-2 row-cols-md-3 row-cols-xxl-5">
         <div className="col"><Stat icon="tags" label="Productos" value={number(data.total_productos)} tone="neutral" hint={`${number(data.total_unidades)} unidades`} /></div>
         <div className="col"><Stat icon="wallet2" label="Valor a costo" value={money(data.valor_costo)} tone="info" /></div>
         <div className="col"><Stat icon="cash-stack" label="Valor a precio de venta" value={money(data.valor_venta)} tone="success" /></div>
@@ -193,7 +193,7 @@ function StaffReport({ range, storeKey }) {
   const sales = data.rows.reduce((a, r) => a + r.total_ventas, 0)
   return (
     <>
-      <div className="row g-3 mb-4 row-cols-2 row-cols-lg-4">
+      <div className="row g-3 mb-4 row-cols-2 row-cols-xl-4">
         <div className="col"><Stat icon="people" label="Personal" value={number(data.total_personal)} tone="neutral" /></div>
         <div className="col"><Stat icon="person-check" label="Activos" value={number(data.activos)} tone="success" /></div>
         <div className="col"><Stat icon="calendar-check" label="Turnos cerrados" value={number(data.rows.reduce((a, r) => a + r.turnos_cerrados, 0))} /></div>

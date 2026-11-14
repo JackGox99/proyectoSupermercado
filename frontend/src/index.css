@@ -155,16 +155,33 @@ body {
   font-size: 1.2rem;
   flex-shrink: 0;
 }
+/* La tarjeta se adapta a SU propio ancho (container query), no al de la pantalla:
+   así funciona igual con zoom, pantallas medianas o grillas de 5 columnas. */
+.stat-card { container-type: inline-size; }
+.stat-card .stat-label,
+.stat-card .small {
+  /* Nunca partir palabras letra a letra (Bootstrap usa word-wrap: break-word en .card). */
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: auto;
+}
 .stat-card .stat-label {
   font-size: 0.75rem;
   font-weight: 500;
+  line-height: 1.3;
   color: var(--bs-secondary-color);
 }
-.stat-card .stat-value { font-size: 1.45rem; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap; }
-@media (max-width: 575.98px) {
-  .stat-card .card-body { flex-direction: column; gap: 0.6rem !important; padding: 0.9rem; }
-  .stat-card .stat-icon { width: 36px; height: 36px; font-size: 1rem; }
-  .stat-card .stat-value { font-size: 1.2rem; }
+.stat-card .stat-value {
+  /* Escala con el ancho de la tarjeta y nunca parte el número. */
+  font-size: clamp(1.05rem, 10.5cqi, 1.45rem);
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+@container (max-width: 240px) {
+  .stat-card .card-body { flex-direction: column; gap: 0.55rem !important; padding: 0.9rem 1rem; }
+  .stat-card .stat-icon { width: 34px; height: 34px; font-size: 1rem; border-radius: 10px; }
 }
 .tone-primary { background: rgba(var(--store-color-rgb), 0.12); color: var(--bs-primary); }
 .tone-success { background: rgba(var(--bs-success-rgb), 0.12); color: var(--bs-success-text-emphasis); }
